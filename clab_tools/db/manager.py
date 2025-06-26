@@ -15,7 +15,7 @@ from sqlalchemy.orm import Session, sessionmaker
 from ..config.settings import DatabaseSettings
 from ..errors.exceptions import DatabaseError
 from ..errors.handlers import handle_database_errors
-from ..logging.logger import LoggerMixin, log_function_call
+from ..log_config.logger import LoggerMixin, log_function_call
 from .models import Base, Connection, Node, TopologyConfig
 
 

@@ -43,7 +43,7 @@ def error_handler(
                 return func(*args, **kwargs)
             except exceptions as e:
                 if log_error:
-                    from ..logging.logger import get_logger
+                    from ..log_config.logger import get_logger
 
                     logger = get_logger(func.__module__)
 
@@ -125,7 +125,7 @@ def safe_operation(operation_name: str, logger=None):
         logger: Logger instance (optional)
     """
     if logger is None:
-        from ..logging.logger import get_logger
+        from ..log_config.logger import get_logger
 
         logger = get_logger(__name__)
 

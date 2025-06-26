@@ -115,7 +115,7 @@ def get_logger(name: str) -> BoundLogger:
 
 #### Usage Pattern
 ```python
-from clab_tools.logging import get_logger
+from clab_tools.log_config import get_logger
 
 logger = get_logger(__name__)
 logger.info("Operation completed", node_count=5, duration=1.23)

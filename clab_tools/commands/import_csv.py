@@ -14,7 +14,7 @@ from ..errors.handlers import (
     validate_file_exists,
     validate_required_columns,
 )
-from ..logging.logger import get_logger
+from ..log_config.logger import get_logger
 
 
 def import_csv_command(db_manager, nodes_csv, connections_csv, clear_existing):
