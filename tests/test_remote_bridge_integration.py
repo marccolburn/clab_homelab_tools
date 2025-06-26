@@ -115,6 +115,10 @@ class TestRemoteBridgeManager:
         remote_manager = Mock(spec=RemoteHostManager)
         remote_manager.is_connected.return_value = True
         remote_manager.execute_command.return_value = (0, "", "")
+        # Add settings mock
+        mock_settings = Mock()
+        mock_settings.use_sudo = True
+        remote_manager.settings = mock_settings
 
         manager = BridgeManager(self.mock_db, remote_manager)
 
@@ -131,6 +135,10 @@ class TestRemoteBridgeManager:
         """Test remote bridge creation in dry run mode."""
         remote_manager = Mock(spec=RemoteHostManager)
         remote_manager.is_connected.return_value = True
+        # Add settings mock
+        mock_settings = Mock()
+        mock_settings.use_sudo = True
+        remote_manager.settings = mock_settings
 
         manager = BridgeManager(self.mock_db, remote_manager)
 
@@ -149,6 +157,10 @@ class TestRemoteBridgeManager:
         remote_manager = Mock(spec=RemoteHostManager)
         remote_manager.is_connected.return_value = True
         remote_manager.execute_command.return_value = (0, "", "")
+        # Add settings mock
+        mock_settings = Mock()
+        mock_settings.use_sudo = True
+        remote_manager.settings = mock_settings
 
         manager = BridgeManager(self.mock_db, remote_manager)
 
@@ -307,3 +319,106 @@ class TestBridgeManagerExecuteCommand:
 
         assert hasattr(exc_info.value, "stderr")
         assert exc_info.value.stderr == "command failed"
+
+
+class TestBridgeManagerSudoCommands:
+    """Test sudo command building functionality."""
+
+    def setup_method(self):
+        """Set up test fixtures."""
+        self.mock_db = Mock()
+        self.mock_db.get_bridge_nodes_by_kind.return_value = []
+
+    def test_build_command_local_always_uses_sudo(self):
+        """Test that local commands always use sudo."""
+        manager = BridgeManager(self.mock_db)  # No remote manager
+
+        command = manager._build_command(["ip", "link", "show"])
+        assert command == ["sudo", "ip", "link", "show"]
+
+    def test_build_command_remote_with_sudo_enabled(self):
+        """Test remote commands with sudo enabled."""
+        remote_settings = RemoteHostSettings(
+            enabled=True,
+            host="10.1.1.1",
+            username="testuser",
+            password="testpass",
+            use_sudo=True,
+        )
+
+        remote_manager = Mock()
+        remote_manager.is_connected.return_value = True
+        remote_manager.settings = remote_settings
+
+        manager = BridgeManager(self.mock_db, remote_manager)
+
+        command = manager._build_command(["ip", "link", "show"])
+        assert command == ["sudo", "ip", "link", "show"]
+
+    def test_build_command_remote_with_sudo_disabled(self):
+        """Test remote commands with sudo disabled (e.g., root user)."""
+        remote_settings = RemoteHostSettings(
+            enabled=True,
+            host="10.1.1.1",
+            username="root",
+            password="testpass",
+            use_sudo=False,
+        )
+
+        remote_manager = Mock()
+        remote_manager.is_connected.return_value = True
+        remote_manager.settings = remote_settings
+
+        manager = BridgeManager(self.mock_db, remote_manager)
+
+        command = manager._build_command(["ip", "link", "show"])
+        assert command == ["ip", "link", "show"]
+
+    def test_build_command_remote_not_connected(self):
+        """Test that disconnected remote manager falls back to local (with sudo)."""
+        remote_manager = Mock()
+        remote_manager.is_connected.return_value = False
+
+        manager = BridgeManager(self.mock_db, remote_manager)
+
+        command = manager._build_command(["ip", "link", "show"])
+        assert command == ["sudo", "ip", "link", "show"]
+
+    @patch("clab_tools.bridges.manager.subprocess.run")
+    def test_create_bridge_uses_conditional_sudo(self, mock_subprocess_run):
+        """Test that bridge creation uses conditional sudo commands."""
+        from clab_tools.config.settings import RemoteHostSettings
+
+        # Mock successful subprocess calls
+        mock_subprocess_run.return_value = Mock(returncode=0, stdout="", stderr="")
+
+        # Test with sudo disabled (root user scenario)
+        remote_settings = RemoteHostSettings(
+            enabled=True,
+            host="10.1.1.1",
+            username="root",
+            password="testpass",
+            use_sudo=False,
+        )
+
+        remote_manager = Mock()
+        remote_manager.is_connected.return_value = True
+        remote_manager.settings = remote_settings
+        remote_manager.execute_command.return_value = (0, "", "")
+
+        manager = BridgeManager(self.mock_db, remote_manager)
+        manager.check_bridge_exists = Mock(return_value=False)
+
+        success, message = manager.create_bridge("test-bridge", dry_run=False)
+
+        # Verify that remote commands were called without sudo
+        expected_calls = [
+            "ip link add name test-bridge type bridge vlan_filtering 1",
+            "ip link set test-bridge up",
+            "bridge vlan add vid 1-4094 dev test-bridge self",
+        ]
+
+        assert remote_manager.execute_command.call_count == 3
+        for i, expected_cmd in enumerate(expected_calls):
+            actual_call = remote_manager.execute_command.call_args_list[i]
+            assert actual_call[0][0] == expected_cmd

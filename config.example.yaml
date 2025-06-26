@@ -48,6 +48,10 @@ remote:
   # Remote directories
   topology_remote_dir: "/tmp/clab-topologies"  # Where to upload topology files
 
+  # Sudo configuration for bridge management
+  use_sudo: true         # Whether to use sudo for bridge commands (default: true)
+  # sudo_password: "sudo-password"  # Sudo password if different from SSH password
+
   # Connection settings
   timeout: 30  # SSH connection timeout in seconds
 

@@ -173,6 +173,7 @@ class TestBridgeManager:
             expected_calls = [
                 call(
                     [
+                        "sudo",
                         "ip",
                         "link",
                         "add",
@@ -188,13 +189,14 @@ class TestBridgeManager:
                     check=True,
                 ),
                 call(
-                    ["ip", "link", "set", "br-test", "up"],
+                    ["sudo", "ip", "link", "set", "br-test", "up"],
                     capture_output=True,
                     text=True,
                     check=True,
                 ),
                 call(
                     [
+                        "sudo",
                         "bridge",
                         "vlan",
                         "add",

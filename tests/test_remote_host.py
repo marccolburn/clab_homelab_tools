@@ -88,6 +88,31 @@ class TestRemoteHostSettings:
             assert settings.password == "testpass"
             assert settings.port == 2222
 
+    def test_sudo_configuration_defaults(self):
+        """Test default sudo configuration values."""
+        settings = RemoteHostSettings()
+        assert settings.use_sudo is True  # Default should be True
+        assert settings.sudo_password is None  # Default should be None
+
+    def test_sudo_configuration_explicit(self):
+        """Test explicit sudo configuration."""
+        settings = RemoteHostSettings(use_sudo=False, sudo_password="sudopass123")
+        assert settings.use_sudo is False
+        assert settings.sudo_password == "sudopass123"
+
+    def test_sudo_environment_variables(self):
+        """Test sudo configuration from environment variables."""
+        with patch.dict(
+            os.environ,
+            {
+                "CLAB_REMOTE_USE_SUDO": "false",
+                "CLAB_REMOTE_SUDO_PASSWORD": "env_sudo_pass",
+            },
+        ):
+            settings = RemoteHostSettings()
+            assert settings.use_sudo is False
+            assert settings.sudo_password == "env_sudo_pass"
+
 
 class TestRemoteHostManager:
     """Test remote host manager functionality."""
@@ -256,6 +281,77 @@ class TestRemoteHostManager:
 
         with pytest.raises(RemoteHostError, match="Command failed"):
             manager.execute_command("false")
+
+    @patch("clab_tools.remote.SSHClient")
+    def test_execute_command_with_sudo_password(self, mock_ssh_class):
+        """Test command execution with sudo password handling."""
+        # Setup settings with sudo password
+        settings = RemoteHostSettings(
+            enabled=True,
+            host="10.1.1.1",
+            username="testuser",
+            password="testpass",
+            sudo_password="sudopass",
+        )
+
+        # Setup connected manager
+        mock_ssh = Mock()
+        mock_sftp = Mock()
+        mock_ssh.open_sftp.return_value = mock_sftp
+        mock_ssh_class.return_value = mock_ssh
+
+        # Mock successful command execution
+        mock_stdin = Mock()
+        mock_stdout = Mock()
+        mock_stderr = Mock()
+        mock_stdout.channel.recv_exit_status.return_value = 0
+        mock_stdout.read.return_value = b"command output"
+        mock_stderr.read.return_value = b""
+
+        mock_ssh.exec_command.return_value = (mock_stdin, mock_stdout, mock_stderr)
+
+        manager = RemoteHostManager(settings)
+        manager.connect()
+
+        # Test sudo command - should inject password
+        exit_code, stdout, stderr = manager.execute_command("sudo ip link show")
+
+        # Verify the command was modified to include sudo password
+        expected_command = "echo 'sudopass' | sudo -S ip link show"
+        mock_ssh.exec_command.assert_called_with(expected_command)
+
+        assert exit_code == 0
+        assert stdout == "command output"
+
+    @patch("clab_tools.remote.SSHClient")
+    def test_execute_command_sudo_without_password(self, mock_ssh_class):
+        """Test sudo command execution without sudo password."""
+        # Setup connected manager (no sudo password)
+        mock_ssh = Mock()
+        mock_sftp = Mock()
+        mock_ssh.open_sftp.return_value = mock_sftp
+        mock_ssh_class.return_value = mock_ssh
+
+        # Mock successful command execution
+        mock_stdin = Mock()
+        mock_stdout = Mock()
+        mock_stderr = Mock()
+        mock_stdout.channel.recv_exit_status.return_value = 0
+        mock_stdout.read.return_value = b"command output"
+        mock_stderr.read.return_value = b""
+
+        mock_ssh.exec_command.return_value = (mock_stdin, mock_stdout, mock_stderr)
+
+        manager = RemoteHostManager(self.settings)  # No sudo_password set
+        manager.connect()
+
+        # Test sudo command - should NOT inject password
+        exit_code, stdout, stderr = manager.execute_command("sudo ip link show")
+
+        # Verify the command was not modified
+        mock_ssh.exec_command.assert_called_with("sudo ip link show")
+
+        assert exit_code == 0
 
     @patch("clab_tools.remote.SSHClient")
     def test_upload_file(self, mock_ssh_class):

@@ -111,21 +111,25 @@ class BridgeManager:
 
         commands = [
             # Create bridge with VLAN filtering enabled
-            [
-                "ip",
-                "link",
-                "add",
-                "name",
-                bridge_name,
-                "type",
-                "bridge",
-                "vlan_filtering",
-                "1",
-            ],
+            self._build_command(
+                [
+                    "ip",
+                    "link",
+                    "add",
+                    "name",
+                    bridge_name,
+                    "type",
+                    "bridge",
+                    "vlan_filtering",
+                    "1",
+                ]
+            ),
             # Bring bridge up
-            ["ip", "link", "set", bridge_name, "up"],
+            self._build_command(["ip", "link", "set", bridge_name, "up"]),
             # Add all VLANs 1-4094 to the bridge
-            ["bridge", "vlan", "add", "vid", "1-4094", "dev", bridge_name, "self"],
+            self._build_command(
+                ["bridge", "vlan", "add", "vid", "1-4094", "dev", bridge_name, "self"]
+            ),
         ]
 
         location = (
@@ -166,8 +170,8 @@ class BridgeManager:
             return True, f"Bridge {bridge_name} does not exist"
 
         commands = [
-            ["ip", "link", "set", bridge_name, "down"],
-            ["ip", "link", "delete", bridge_name],
+            self._build_command(["ip", "link", "set", bridge_name, "down"]),
+            self._build_command(["ip", "link", "delete", bridge_name]),
         ]
 
         location = (
@@ -213,13 +217,21 @@ class BridgeManager:
             messages.append(message)
             if success:
                 success_count += 1
+            else:
+                # Log the specific error for debugging
+                click.echo(f"  ✗ {message}")
 
         if dry_run:
             return True, f"Dry run: would create {len(missing_bridges)} bridges"
         else:
-            return (
-                success_count == len(missing_bridges)
-            ), f"Created {success_count}/{len(missing_bridges)} bridges"
+            if success_count == len(missing_bridges):
+                return True, f"Created {success_count}/{len(missing_bridges)} bridges"
+            else:
+                return (
+                    False,
+                    f"Created {success_count}/{len(missing_bridges)} bridges. "
+                    f"Check errors above for details.",
+                )
 
     def delete_all_bridges(self, dry_run=False, force=False):
         """Delete all existing bridges that match our pattern."""
@@ -247,3 +259,23 @@ class BridgeManager:
             return (
                 success_count == len(existing_bridges)
             ), f"Deleted {success_count}/{len(existing_bridges)} bridges"
+
+    def _build_command(self, base_command):
+        """
+        Build a command with conditional sudo based on remote host settings.
+
+        Args:
+            base_command: List of command parts without sudo
+
+        Returns:
+            List of command parts with sudo prepended if needed
+        """
+        # If running locally, always use sudo (existing behavior)
+        if not self.remote_manager or not self.remote_manager.is_connected():
+            return ["sudo"] + base_command
+
+        # If running remotely, check remote host settings
+        if self.remote_manager.settings.use_sudo:
+            return ["sudo"] + base_command
+        else:
+            return base_command
