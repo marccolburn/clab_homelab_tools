@@ -4,7 +4,7 @@ This document provides clear visual workflows for different user types and expla
 
 ## 🎯 1. General Usage by End Users
 
-### User Journey: From CSV to Containerlab Topology
+### User Journey: From CSV to Containerlab Topology (Local and Remote)
 
 ```mermaid
 graph TD
@@ -13,24 +13,41 @@ graph TD
     C --> D[Install CLI Tool]
     D --> E[Import CSV Data]
     E --> F[Verify Data]
-    F --> G[Generate Topology]
-    G --> H[Use with Containerlab]
+    F --> G{Deploy Locally or Remotely?}
+    G -->|Local| H[Generate Topology]
+    G -->|Remote| I[Configure Remote Host]
+    H --> J[Create Local Bridges]
+    H --> K[Use with Containerlab]
+    I --> L[Generate & Upload Topology]
+    L --> M[Create Remote Bridges]
+    M --> N[Deploy on Remote Host]
 
     C --> C1[python3 -m venv .venv<br/>source .venv/bin/activate<br/>pip install -r requirements.txt]
     D --> D1[./install-cli.sh<br/>Creates system-wide 'clab-tools' command]
     E --> E1[clab-tools import-csv -n nodes.csv -c connections.csv]
     F --> F1[clab-tools show-data]
-    G --> G1[clab-tools generate-topology -o lab.yml]
-    H --> H1[containerlab deploy -t lab.yml]
+    I --> I1[Edit config.yaml or use CLI flags<br/>--remote-host 192.168.1.100<br/>--remote-user clab-user --enable-remote]
+    H --> H1[clab-tools generate-topology -o lab.yml]
+    J --> J1[sudo clab-tools create-bridges]
+    K --> K1[containerlab deploy -t lab.yml]
+    L --> L1[clab-tools generate-topology --upload --enable-remote]
+    M --> M1[clab-tools create-bridges --enable-remote]
+    N --> N1[clab-tools remote execute "clab deploy -t /tmp/clab-topologies/lab.yml"]
 
     style A fill:#e1f5fe
-    style H fill:#c8e6c9
+    style K fill:#c8e6c9
+    style N fill:#c8e6c9
     style C1 fill:#fff3e0
     style D1 fill:#fff3e0
     style E1 fill:#fff3e0
     style F1 fill:#fff3e0
-    style G1 fill:#fff3e0
-    style H1 fill:#c8e6c9
+    style I1 fill:#e8f5e8
+    style H1 fill:#fff3e0
+    style J1 fill:#fff3e0
+    style K1 fill:#c8e6c9
+    style L1 fill:#e8f5e8
+    style M1 fill:#e8f5e8
+    style N1 fill:#c8e6c9
 ```
 
 ### Simple User Commands Reference
@@ -41,6 +58,19 @@ graph TD
 | 2 | `clab-tools import-csv -n nodes.csv -c connections.csv` | Import network data | Database in current directory |
 | 3 | `clab-tools show-data` | Verify imported data | Console output |
 | 4 | `clab-tools generate-topology -o lab.yml` | Create containerlab file | `lab.yml` in current directory |
+| 5a | `sudo clab-tools create-bridges` | Create bridges locally | Local system |
+| 5b | `clab-tools create-bridges --enable-remote` | Create bridges remotely | Remote host |
+| 6a | `clab-tools generate-topology --upload --enable-remote` | Generate and upload to remote | Remote host |
+| 6b | `clab-tools remote execute "clab deploy -t /tmp/topology.yml"` | Deploy on remote host | Remote containerlab |
+
+### Remote Host Commands Reference
+
+| Command | Purpose | Example |
+|---------|---------|---------|
+| `clab-tools remote test-connection` | Test remote connectivity | `--host 192.168.1.100 --username clab` |
+| `clab-tools remote show-config` | Display remote configuration | Shows current remote settings |
+| `clab-tools remote upload-topology` | Upload topology file | `local.yml /remote/path/topology.yml` |
+| `clab-tools remote execute` | Run command on remote host | `"clab deploy -t /tmp/topology.yml"` |
 
 ### File Flow for Users
 
@@ -48,8 +78,14 @@ graph TD
 User Directory/
 ├── nodes.csv              # Input: Network nodes
 ├── connections.csv         # Input: Network connections
+├── config.yaml            # Optional: Remote host configuration
 ├── clab_topology.db       # Created: Database (SQLite)
 └── lab.yml                # Output: Containerlab topology
+
+Remote Host (if configured)/
+└── /tmp/clab-topologies/
+    ├── lab.yml            # Uploaded: Topology file
+    └── backups/           # Optional: Backup topologies
 ```
 
 **Key Points for Users:**
@@ -57,6 +93,8 @@ User Directory/
 - ✅ Database persists between sessions
 - ✅ CLI works from any directory after installation
 - ✅ No need to understand Python/development tools
+- ✅ Remote host operations work seamlessly when configured
+- ✅ Supports both local and remote containerlab deployments
 
 ---
 
@@ -256,6 +294,7 @@ graph TB
         CSV[CSV Import<br/>clab_tools/commands/]
         TOPO[Topology Generation<br/>clab_tools/topology/]
         BRIDGE[Bridge Management<br/>clab_tools/bridges/]
+        REMOTE[Remote Host Management<br/>clab_tools/remote/]
     end
 
     subgraph "Data Layer"
@@ -271,24 +310,29 @@ graph TB
     CLI --> CSV
     CLI --> TOPO
     CLI --> BRIDGE
+    CLI --> REMOTE
     SCRIPT --> CLI
 
     CSV --> DB
     TOPO --> DB
     BRIDGE --> DB
+    REMOTE --> DB
 
     CSV --> CONFIG
     TOPO --> CONFIG
     BRIDGE --> CONFIG
+    REMOTE --> CONFIG
 
     CSV --> LOG
     TOPO --> LOG
     BRIDGE --> LOG
+    REMOTE --> LOG
     DB --> LOG
 
     CSV --> ERROR
     TOPO --> ERROR
     BRIDGE --> ERROR
+    REMOTE --> ERROR
     DB --> ERROR
 
     style CLI fill:#e3f2fd
@@ -296,6 +340,7 @@ graph TB
     style CSV fill:#f3e5f5
     style TOPO fill:#f3e5f5
     style BRIDGE fill:#f3e5f5
+    style REMOTE fill:#e8f5e8
     style DB fill:#e8f5e8
     style CONFIG fill:#e8f5e8
     style LOG fill:#fff3e0

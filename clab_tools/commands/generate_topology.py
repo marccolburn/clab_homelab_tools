@@ -1,13 +1,15 @@
 """
 Generate Topology Command
 
-Handles generating containerlab topology files from database data.
+Handles generating containerlab topology files from database data and
+optionally uploading them to remote hosts.
 """
 
 import sys
 
 import click
 
+from ..remote import get_remote_host_manager
 from ..topology.generator import TopologyGenerator
 
 
@@ -21,6 +23,7 @@ def generate_topology_command(
     template,
     kinds_config,
     validate,
+    upload_remote=False,
 ):
     """
     Generate containerlab topology file from database data.
@@ -35,6 +38,7 @@ def generate_topology_command(
         template: Template file path
         kinds_config: Kinds configuration file path
         validate: Whether to validate the generated YAML
+        upload_remote: Whether to upload to remote host
     """
     generator = TopologyGenerator(db_manager, template, kinds_config)
 
@@ -76,12 +80,31 @@ def generate_topology_command(
         else:
             click.echo(f"✗ {message}", err=True)
 
+    # Upload to remote host if requested
+    if upload_remote:
+        remote_manager = get_remote_host_manager()
+        if remote_manager:
+            try:
+                with remote_manager:
+                    remote_path = remote_manager.upload_topology_file(output)
+                    click.echo(f"📤 Uploaded topology to remote host: {remote_path}")
+            except Exception as e:
+                click.echo(f"✗ Failed to upload to remote host: {e}", err=True)
+                sys.exit(1)
+        else:
+            click.echo(
+                "⚠ Remote upload requested but remote host not configured", err=True
+            )
+            sys.exit(1)
+
     # Calculate summary
     _, links, bridges = generator.generate_topology_data()
     click.echo("\n=== Generation Complete ===")
     click.echo("Summary:")
     click.echo(f"  - Nodes: {len(nodes)} ({len(bridges)} bridges)")
     click.echo(f"  - Links: {len(links)}")
+    if upload_remote:
+        click.echo("  - Remote upload: ✓")
 
 
 @click.command()
@@ -101,6 +124,7 @@ def generate_topology_command(
     help="Supported kinds configuration file",
 )
 @click.option("--validate", is_flag=True, help="Validate generated YAML file")
+@click.option("--upload", is_flag=True, help="Upload topology file to remote host")
 @click.pass_context
 def generate_topology(
     ctx,
@@ -112,12 +136,16 @@ def generate_topology(
     template,
     kinds_config,
     validate,
+    upload,
 ):
     """
     Generate containerlab topology file from database data.
 
     Reads node and connection information from the database and generates
     a containerlab topology YAML file using Jinja2 templating.
+
+    Use --upload to automatically upload the generated topology to the
+    configured remote host.
     """
     db_manager = ctx.obj["db_manager"]
     generate_topology_command(
@@ -130,4 +158,5 @@ def generate_topology(
         template,
         kinds_config,
         validate,
+        upload,
     )

@@ -11,10 +11,15 @@ import sys
 
 import click
 
-from clab_tools.commands.bridge_commands import cleanup_bridges, create_bridges
+from clab_tools.commands.bridge_commands import (
+    cleanup_bridges,
+    create_bridges,
+    list_bridges,
+)
 from clab_tools.commands.data_commands import clear_data, show_data
 from clab_tools.commands.generate_topology import generate_topology
 from clab_tools.commands.import_csv import import_csv
+from clab_tools.commands.remote_commands import remote
 from clab_tools.config.settings import initialize_settings
 from clab_tools.db.manager import DatabaseManager
 from clab_tools.errors.handlers import error_handler
@@ -31,9 +36,30 @@ from clab_tools.log_config.logger import get_logger, setup_logging
     help="Set log level (DEBUG, INFO, WARNING, ERROR, CRITICAL)",
 )
 @click.option("--log-format", default=None, help="Set log format (json, console)")
+@click.option(
+    "--remote-host", default=None, help="Remote containerlab host IP/hostname"
+)
+@click.option("--remote-user", default=None, help="Remote host username")
+@click.option("--remote-password", default=None, help="Remote host password")
+@click.option("--remote-port", default=None, type=int, help="Remote host SSH port")
+@click.option("--remote-key", default=None, help="Path to SSH private key file")
+@click.option("--enable-remote", is_flag=True, help="Enable remote host operations")
 @click.pass_context
 @error_handler(exit_on_error=True)
-def cli(ctx, db_url, config, debug, log_level, log_format):
+def cli(
+    ctx,
+    db_url,
+    config,
+    debug,
+    log_level,
+    log_format,
+    remote_host,
+    remote_user,
+    remote_password,
+    remote_port,
+    remote_key,
+    enable_remote,
+):
     """
     Containerlab Homelab Tools - A comprehensive CLI for managing containerlab
     topologies.
@@ -62,6 +88,20 @@ def cli(ctx, db_url, config, debug, log_level, log_format):
     if debug:
         settings.debug = debug
         settings.logging.level = "DEBUG"
+
+    # Override remote settings with command line arguments
+    if enable_remote or remote_host:
+        settings.remote.enabled = True
+    if remote_host:
+        settings.remote.host = remote_host
+    if remote_user:
+        settings.remote.username = remote_user
+    if remote_password:
+        settings.remote.password = remote_password
+    if remote_port:
+        settings.remote.port = remote_port
+    if remote_key:
+        settings.remote.private_key_path = remote_key
 
     # Setup logging
     setup_logging(settings.logging)
@@ -94,8 +134,12 @@ cli.add_command(import_csv)
 cli.add_command(generate_topology)
 cli.add_command(create_bridges)
 cli.add_command(cleanup_bridges)
+cli.add_command(list_bridges)
 cli.add_command(show_data)
 cli.add_command(clear_data)
+
+# Remote commands group
+cli.add_command(remote)
 
 
 if __name__ == "__main__":
