@@ -7,9 +7,9 @@ name = "clab-homelab-tools"
 version = "0.1.0"
 description = "A comprehensive CLI tool for managing containerlab network topologies with persistent storage"
 readme = "README.md"
-license = {text = "MIT"}
+license = {file = "LICENSE"}
 authors = [
-    {name = "Marc Colburn", email = "your.email@example.com"}
+    {name = "Marc Colburn"}
 ]
 classifiers = [
     "Development Status :: 4 - Beta",

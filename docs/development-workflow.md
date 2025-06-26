@@ -38,7 +38,7 @@ We follow a **trunk-based development** approach where:
 
 ```bash
 # Clone the repository
-git clone <repository-url>
+git clone https://github.com/marccolburn/clab_homelab_tools.git
 cd clab_homelab_tools
 
 # Run the development setup script

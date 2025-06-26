@@ -2,7 +2,7 @@
 
 ## 🚀 One-Time Setup
 ```bash
-git clone <repository-url>
+git clone https://github.com/marccolburn/clab_homelab_tools.git
 cd clab_homelab_tools
 ./scripts/setup-dev.sh  # For developers
 # OR
