@@ -260,6 +260,99 @@ class BridgeManager:
                 success_count == len(existing_bridges)
             ), f"Deleted {success_count}/{len(existing_bridges)} bridges"
 
+    def configure_bridge_vlans(self, bridge_name, dry_run=False):
+        """Configure VLANs on all ports of an existing bridge.
+
+        This method should be called after containerlab has created and connected
+        interfaces to the bridge to ensure VLAN traffic can flow properly.
+
+        Args:
+            bridge_name: Name of the bridge to configure
+            dry_run: If True, only show what would be done
+
+        Returns:
+            Tuple of (success: bool, message: str)
+        """
+        if not self.check_bridge_exists(bridge_name):
+            return False, f"Bridge {bridge_name} does not exist"
+
+        location = (
+            "remote host"
+            if self.remote_manager and self.remote_manager.is_connected()
+            else "local system"
+        )
+
+        # Get list of bridge ports
+        try:
+            cmd = self._build_command(["bridge", "link", "show", "master", bridge_name])
+            result = self._execute_command(
+                cmd, capture_output=True, text=True, check=True
+            )
+
+            # Parse the output to get interface names
+            # Output format: "2: eth401@if3: <BROADCAST,MULTICAST,UP,LOWER_UP>
+            # mtu 9500 master br-allvlans-1"
+            ports = []
+            for line in result.stdout.strip().split("\n"):
+                if line and "master" in line and bridge_name in line:
+                    # Extract interface name (before the '@' or ':')
+                    parts = line.split(":")
+                    if len(parts) >= 2:
+                        interface = parts[1].strip()
+                        if "@" in interface:
+                            interface = interface.split("@")[0]
+                        ports.append(interface)
+
+            if not ports:
+                return True, f"No ports found on bridge {bridge_name}"
+
+            # Configure VLANs on each port
+            commands = []
+            for port in ports:
+                # Add all VLANs 1-4094 to this port
+                commands.append(
+                    self._build_command(
+                        ["bridge", "vlan", "add", "vid", "1-4094", "dev", port]
+                    )
+                )
+
+            if dry_run:
+                click.echo(
+                    f"Would configure VLANs on {len(ports)} ports of bridge "
+                    f"{bridge_name} on {location}"
+                )
+                for i, port in enumerate(ports):
+                    click.echo(f"  Port {i+1}: {port}")
+                    click.echo(f"    Command: {' '.join(commands[i])}")
+                return True, f"Dry run: would configure VLANs on {len(ports)} ports"
+
+            # Execute commands
+            success_count = 0
+            for i, cmd in enumerate(commands):
+                try:
+                    self._execute_command(
+                        cmd, capture_output=True, text=True, check=True
+                    )
+                    success_count += 1
+                    click.echo(f"✓ Configured VLANs on port {ports[i]}")
+                except Exception as e:
+                    click.echo(f"✗ Failed to configure VLANs on port {ports[i]}: {e}")
+
+            if success_count == len(commands):
+                return (
+                    True,
+                    f"Successfully configured VLANs on {success_count}/"
+                    f"{len(ports)} ports of {bridge_name}",
+                )
+            else:
+                return (
+                    False,
+                    f"Configured VLANs on {success_count}/{len(ports)} ports. "
+                    f"Some failed.",
+                )
+        except Exception as e:
+            return False, f"Failed to configure bridge VLANs: {e}"
+
     def _build_command(self, base_command):
         """
         Build a command with conditional sudo based on remote host settings.

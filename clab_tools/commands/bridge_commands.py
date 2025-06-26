@@ -180,6 +180,75 @@ def _execute_bridge_listing(bridge_manager, remote=False):
         click.echo("\n✓ All required bridges exist on {}".format(location))
 
 
+def configure_vlans_command(db_manager, bridge_name, dry_run):
+    """
+    Configure VLANs on bridge interfaces.
+
+    Args:
+        db_manager: Database manager instance
+        bridge_name: Name of the bridge to configure VLANs on (or None for all bridges)
+        dry_run: Whether to show what would be done without making changes
+    """
+    # Get remote host manager if configured
+    remote_manager = get_remote_host_manager()
+
+    if remote_manager:
+        with remote_manager:
+            bridge_manager = BridgeManager(db_manager, remote_manager)
+            _execute_vlan_configuration(
+                bridge_manager, bridge_name, dry_run, remote=True
+            )
+    else:
+        bridge_manager = BridgeManager(db_manager)
+        _execute_vlan_configuration(bridge_manager, bridge_name, dry_run, remote=False)
+
+
+def _execute_vlan_configuration(bridge_manager, bridge_name, dry_run, remote=False):
+    """Execute VLAN configuration with given manager."""
+    location = "remote host" if remote else "local system"
+    click.echo(f"=== VLAN Configuration ({location}) ===")
+
+    # Determine which bridges to configure
+    if bridge_name:
+        target_bridges = [bridge_name]
+        click.echo(f"Configuring VLANs on bridge: {bridge_name}")
+    else:
+        # Get all required bridges from database
+        target_bridges = bridge_manager.get_bridge_list_from_db()
+        if not target_bridges:
+            click.echo("No bridge connections found in database.")
+            return
+        click.echo(f"Configuring VLANs on {len(target_bridges)} bridges from topology")
+
+    # Configure VLANs on each bridge
+    success_count = 0
+    for bridge in target_bridges:
+        click.echo(f"\n--- Configuring VLANs on bridge: {bridge} ---")
+
+        # Check if bridge exists first
+        if not bridge_manager.check_bridge_exists(bridge):
+            click.echo(f"⚠ Bridge {bridge} does not exist - skipping")
+            continue
+
+        success, message = bridge_manager.configure_bridge_vlans(bridge, dry_run)
+
+        if success:
+            click.echo(f"✓ {message}")
+            success_count += 1
+        else:
+            click.echo(f"✗ {message}")
+
+    # Summary
+    click.echo("\n=== VLAN Configuration Summary ===")
+    if dry_run:
+        click.echo(f"Dry run: would configure VLANs on {len(target_bridges)} bridges")
+    else:
+        click.echo(
+            f"Successfully configured VLANs on "
+            f"{success_count}/{len(target_bridges)} bridges"
+        )
+
+
 @click.command()
 @click.option(
     "--dry-run", is_flag=True, help="Show what would be done without making changes"
@@ -228,6 +297,33 @@ def list_bridges(ctx):
     """
     db_manager = ctx.obj["db_manager"]
     list_bridges_command(db_manager)
+
+
+@click.command()
+@click.option(
+    "--bridge",
+    help="Name of specific bridge to configure VLANs on "
+    "(default: all bridges from topology)",
+)
+@click.option(
+    "--dry-run", is_flag=True, help="Show what would be done without making changes"
+)
+@click.pass_context
+def configure_vlans(ctx, bridge, dry_run):
+    """
+    Configure VLANs on bridge interfaces.
+
+    This command configures VLAN forwarding on all ports of Linux bridges
+    to ensure VLAN traffic can flow properly. It should be run after
+    containerlab has created and connected interfaces to bridges.
+
+    By default, configures VLANs on all bridges found in the topology.
+    Use --bridge to target a specific bridge.
+
+    Supports both local and remote host operations.
+    """
+    db_manager = ctx.obj["db_manager"]
+    configure_vlans_command(db_manager, bridge, dry_run)
 
 
 # Legacy command names for backward compatibility

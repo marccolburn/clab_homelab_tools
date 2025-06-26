@@ -35,14 +35,14 @@ r2,br-access,direct,ge-0/0/2,eth22
 
 ```bash
 # Import CSV data into database
-python main.py import-csv -n nodes.csv -c connections.csv --clear-existing
+clab-tools import-csv -n nodes.csv -c connections.csv --clear-existing
 ```
 
 ### 3. Verify Data
 
 ```bash
 # View imported data
-python main.py show-data
+clab-tools show-data
 ```
 
 ### 4. Choose Deployment Target
@@ -52,17 +52,17 @@ You can deploy containerlab either locally or on a remote host:
 #### Local Deployment
 ```bash
 # Create VLAN-capable bridges on the local system
-python main.py create-bridges --dry-run  # Preview first
-python main.py create-bridges            # Create the bridges
+clab-tools create-bridges --dry-run  # Preview first
+clab-tools create-bridges            # Create the bridges
 ```
 
 #### Remote Deployment
 ```bash
 # Configure remote host (one-time setup)
-python main.py --remote-host 192.168.1.100 --remote-user clab-user --enable-remote remote test-connection
+clab-tools --remote-host 192.168.1.100 --remote-user clab-user --enable-remote remote test-connection
 
 # Create bridges on remote host
-python main.py --enable-remote create-bridges
+clab-tools --enable-remote create-bridges
 
 # Or configure in config.yaml:
 # remote:
@@ -77,13 +77,13 @@ python main.py --enable-remote create-bridges
 #### Local Topology Generation
 ```bash
 # Generate containerlab topology file
-python main.py generate-topology -o my_lab.yml -t "production_lab" --validate
+clab-tools generate-topology -o my_lab.yml -t "production_lab" --validate
 ```
 
 #### Remote Topology Generation with Upload
 ```bash
 # Generate and automatically upload to remote host
-python main.py generate-topology --upload --enable-remote -o my_lab.yml -t "production_lab" --validate
+clab-tools generate-topology --upload --enable-remote -o my_lab.yml -t "production_lab" --validate
 ```
 
 ### 6. Deploy with Containerlab
@@ -97,22 +97,22 @@ sudo clab deploy -t my_lab.yml
 sudo clab destroy -t my_lab.yml
 
 # Clean up bridges
-sudo python main.py cleanup-bridges
+sudo clab-tools cleanup-bridges
 ```
 
 #### Remote Deployment
 ```bash
 # Deploy on remote host
-python main.py remote execute "sudo clab deploy -t /tmp/clab-topologies/my_lab.yml"
+clab-tools remote execute "sudo clab deploy -t /tmp/clab-topologies/my_lab.yml"
 
 # Check deployment status
-python main.py remote execute "clab inspect"
+clab-tools remote execute "clab inspect"
 
 # When finished, destroy the lab
-python main.py remote execute "sudo clab destroy -t /tmp/clab-topologies/my_lab.yml"
+clab-tools remote execute "sudo clab destroy -t /tmp/clab-topologies/my_lab.yml"
 
 # Clean up bridges on remote host
-python main.py --enable-remote cleanup-bridges
+clab-tools --enable-remote cleanup-bridges
 ```
 
 ## CLI Commands Reference
@@ -138,7 +138,7 @@ All commands support these global options:
 ### Import CSV Data
 
 ```bash
-python main.py import-csv [OPTIONS]
+clab-tools import-csv [OPTIONS]
 ```
 
 **Options:**
@@ -149,19 +149,19 @@ python main.py import-csv [OPTIONS]
 **Examples:**
 ```bash
 # Basic import
-python main.py import-csv -n nodes.csv -c connections.csv
+clab-tools import-csv -n nodes.csv -c connections.csv
 
 # Clear existing data before import
-python main.py import-csv -n nodes.csv -c connections.csv --clear-existing
+clab-tools import-csv -n nodes.csv -c connections.csv --clear-existing
 
 # Import with debug logging
-python main.py --debug import-csv -n nodes.csv -c connections.csv
+clab-tools --debug import-csv -n nodes.csv -c connections.csv
 ```
 
 ### Generate Topology
 
 ```bash
-python main.py generate-topology [OPTIONS]
+clab-tools generate-topology [OPTIONS]
 ```
 
 **Options:**
@@ -178,58 +178,69 @@ python main.py generate-topology [OPTIONS]
 **Examples:**
 ```bash
 # Basic topology generation
-python main.py generate-topology -o lab.yml
+clab-tools generate-topology -o lab.yml
 
 # Custom topology with validation
-python main.py generate-topology -o production.yml -t "prod_lab" --validate
+clab-tools generate-topology -o production.yml -t "prod_lab" --validate
 
 # Override management settings
-python main.py generate-topology -o lab.yml -m "mgmt_net" -s "192.168.100.0/24"
+clab-tools generate-topology -o lab.yml -m "mgmt_net" -s "192.168.100.0/24"
 
 # Generate and upload to remote host
-python main.py generate-topology --upload --enable-remote -o lab.yml
+clab-tools generate-topology --upload --enable-remote -o lab.yml
 
 # Generate with remote host specified via CLI
-python main.py --remote-host 192.168.1.100 --remote-user clab --enable-remote generate-topology --upload -o lab.yml
+clab-tools --remote-host 192.168.1.100 --remote-user clab --enable-remote generate-topology --upload -o lab.yml
 ```
 
 ### Bridge Management
 
 ```bash
-python main.py create-bridges [OPTIONS]
-python main.py cleanup-bridges [OPTIONS]
-python main.py list-bridges
+clab-tools create-bridges [OPTIONS]
+clab-tools cleanup-bridges [OPTIONS]
+clab-tools configure-vlans [OPTIONS]
+clab-tools list-bridges
 ```
 
 **Options:**
 - `--dry-run`: Show what would be done without making changes
-- `--force`: Proceed without confirmation prompts
+- `--force`: Proceed without confirmation prompts (create/cleanup only)
+- `--bridge BRIDGE_NAME`: Target specific bridge (configure-vlans only)
 
 **Examples:**
 ```bash
 # Preview bridge creation locally
-python main.py create-bridges --dry-run
+clab-tools create-bridges --dry-run
 
 # Create bridges locally
-sudo python main.py create-bridges
+sudo clab-tools create-bridges
 
 # Create bridges on remote host
-python main.py --enable-remote create-bridges
+clab-tools --enable-remote create-bridges
+
+# Configure VLANs on all bridges (after containerlab deployment)
+clab-tools configure-vlans --dry-run
+sudo clab-tools configure-vlans
+
+# Configure VLANs on specific bridge
+clab-tools configure-vlans --bridge br-core
 
 # List bridge status locally
-python main.py list-bridges
+clab-tools list-bridges
 
 # List bridge status on remote host
-python main.py --enable-remote list-bridges
+clab-tools --enable-remote list-bridges
 
 # Force cleanup without prompts on remote host
-python main.py --enable-remote cleanup-bridges --force
+clab-tools --enable-remote cleanup-bridges --force
 ```
+
+> **Important**: The `configure-vlans` command should be run **after** containerlab has deployed your topology and connected interfaces to the bridges. This ensures VLAN traffic can flow properly through all bridge ports by configuring VLAN forwarding on each connected interface.
 
 ### Remote Host Management
 
 ```bash
-python main.py remote [SUBCOMMAND] [OPTIONS]
+clab-tools remote [SUBCOMMAND] [OPTIONS]
 ```
 
 **Subcommands:**
@@ -241,26 +252,26 @@ python main.py remote [SUBCOMMAND] [OPTIONS]
 **Examples:**
 ```bash
 # Test remote connection
-python main.py remote test-connection --host 192.168.1.100 --username clab-user
+clab-tools remote test-connection --host 192.168.1.100 --username clab-user
 
 # Show current remote configuration
-python main.py remote show-config
+clab-tools remote show-config
 
 # Upload topology file
-python main.py remote upload-topology lab.yml /tmp/clab-topologies/lab.yml
+clab-tools remote upload-topology lab.yml /tmp/clab-topologies/lab.yml
 
 # Execute command on remote host
-python main.py remote execute "clab inspect"
+clab-tools remote execute "clab inspect"
 
 # Deploy containerlab on remote host
-python main.py remote execute "sudo clab deploy -t /tmp/clab-topologies/lab.yml"
+clab-tools remote execute "sudo clab deploy -t /tmp/clab-topologies/lab.yml"
 ```
 
 ### Data Management
 
 ```bash
-python main.py show-data
-python main.py clear-data [OPTIONS]
+clab-tools show-data
+clab-tools clear-data [OPTIONS]
 ```
 
 **Options for clear-data:**
