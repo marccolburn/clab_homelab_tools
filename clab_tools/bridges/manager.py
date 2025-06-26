@@ -6,7 +6,6 @@ deletion, and management of network bridges based on topology data.
 """
 
 import subprocess
-from collections import defaultdict
 
 import click
 
@@ -18,19 +17,14 @@ class BridgeManager:
         self.db = db_manager
 
     def get_bridge_list_from_db(self):
-        """Get list of bridges that should exist based on database connections."""
+        """Get list of bridges that should exist based on bridge nodes in database."""
         bridges = set()
-        bridge_counter = defaultdict(int)
 
-        connections = self.db.get_all_connections()
-        for node1, node2, conn_type, node1_interface, node2_interface in connections:
-            if conn_type == "bridge":
-                bridge_counter[(node1, node2)] += 1
-
-                node1_int_clean = node1_interface.replace("/", "").replace("-", "")
-                node2_int_clean = node2_interface.replace("/", "").replace("-", "")
-                bridge_name = f"br-{node1}-{node1_int_clean}-{node2}-{node2_int_clean}"
-                bridges.add(bridge_name)
+        # Get all nodes and find bridge types
+        nodes = self.db.get_all_nodes()
+        for name, kind, mgmt_ip in nodes:
+            if kind == "bridge":
+                bridges.add(name)
 
         return sorted(bridges)
 
@@ -70,25 +64,44 @@ class BridgeManager:
         return missing
 
     def create_bridge(self, bridge_name, dry_run=False):
-        """Create a Linux bridge on the system."""
+        """Create a VLAN-capable Linux bridge that supports VLANs 1-4094."""
         if self.check_bridge_exists(bridge_name):
             return True, f"Bridge {bridge_name} already exists"
 
         commands = [
-            ["ip", "link", "add", "name", bridge_name, "type", "bridge"],
+            # Create bridge with VLAN filtering enabled
+            [
+                "ip",
+                "link",
+                "add",
+                "name",
+                bridge_name,
+                "type",
+                "bridge",
+                "vlan_filtering",
+                "1",
+            ],
+            # Bring bridge up
             ["ip", "link", "set", bridge_name, "up"],
+            # Add all VLANs 1-4094 to the bridge
+            ["bridge", "vlan", "add", "vid", "1-4094", "dev", bridge_name, "self"],
         ]
 
         if dry_run:
-            click.echo(f"Would create bridge: {bridge_name}")
+            click.echo(f"Would create VLAN-capable bridge: {bridge_name}")
             for cmd in commands:
                 click.echo(f"  Command: {' '.join(cmd)}")
-            return True, f"Dry run: would create {bridge_name}"
+            click.echo("Bridge will support VLANs 1-4094")
+            return True, f"Dry run: would create VLAN-capable {bridge_name}"
 
         try:
             for cmd in commands:
                 subprocess.run(cmd, capture_output=True, text=True, check=True)
-            return True, f"Successfully created bridge {bridge_name}"
+            return (
+                True,
+                f"Successfully created VLAN-capable bridge {bridge_name} "
+                f"(VLANs 1-4094)",
+            )
         except subprocess.CalledProcessError as e:
             return False, f"Failed to create bridge {bridge_name}: {e.stderr}"
         except Exception as e:

@@ -3,6 +3,7 @@
 import pytest
 
 from clab_tools.commands.import_csv import import_csv_command
+from clab_tools.errors.exceptions import CSVImportError
 
 
 class TestCSVImport:
@@ -75,3 +76,81 @@ class TestCSVImport:
 
         # Node count should be the same (updated, not duplicated)
         assert final_node_count == initial_node_count
+
+    def test_bridge_nodes_without_mgmt_ip(self, db_manager, temp_dir):
+        """Test importing bridge nodes without management IP."""
+        # Create CSV with bridge nodes having empty mgmt_ip
+        nodes_csv_content = """node_name,kind,mgmt_ip
+router1,nokia_srlinux,172.20.20.10
+br-main,bridge,
+br-access,bridge,N/A
+"""
+        nodes_csv = temp_dir / "bridge_nodes.csv"
+        nodes_csv.write_text(nodes_csv_content)
+
+        connections_csv_content = """node1,node2,type,node1_interface,node2_interface
+router1,br-main,veth,eth1,eth1
+"""
+        connections_csv = temp_dir / "bridge_connections.csv"
+        connections_csv.write_text(connections_csv_content)
+
+        # Import should succeed
+        import_csv_command(
+            db_manager, str(nodes_csv), str(connections_csv), clear_existing=True
+        )
+
+        # Verify nodes were imported correctly
+        nodes = db_manager.get_all_nodes()
+        assert len(nodes) == 3
+
+        # Check bridge nodes have N/A for mgmt_ip
+        bridge_nodes = db_manager.get_nodes_by_kind("bridge")
+        assert len(bridge_nodes) == 2
+        for bridge in bridge_nodes:
+            assert bridge.mgmt_ip == "N/A"
+
+    def test_non_bridge_nodes_require_mgmt_ip(self, db_manager, temp_dir):
+        """Test that non-bridge nodes still require mgmt_ip."""
+        # Create CSV with non-bridge node missing mgmt_ip
+        nodes_csv_content = """node_name,kind,mgmt_ip
+router1,nokia_srlinux,
+router2,cisco_xrd,172.20.20.11
+"""
+        nodes_csv = temp_dir / "incomplete_nodes.csv"
+        nodes_csv.write_text(nodes_csv_content)
+
+        connections_csv_content = """node1,node2,type,node1_interface,node2_interface
+router1,router2,veth,eth1,eth1
+"""
+        connections_csv = temp_dir / "simple_connections.csv"
+        connections_csv.write_text(connections_csv_content)
+
+        # Import should fail due to missing mgmt_ip for non-bridge node
+        with pytest.raises(
+            CSVImportError, match="mgmt_ip is required for non-bridge nodes"
+        ):
+            import_csv_command(
+                db_manager, str(nodes_csv), str(connections_csv), clear_existing=True
+            )
+
+    def test_nodes_missing_required_fields(self, db_manager, temp_dir):
+        """Test that nodes with missing name or kind fail import."""
+        # Create CSV with missing required fields
+        nodes_csv_content = """node_name,kind,mgmt_ip
+,nokia_srlinux,172.20.20.10
+router2,,172.20.20.11
+"""
+        nodes_csv = temp_dir / "invalid_nodes.csv"
+        nodes_csv.write_text(nodes_csv_content)
+
+        connections_csv_content = """node1,node2,type,node1_interface,node2_interface
+router1,router2,veth,eth1,eth1
+"""
+        connections_csv = temp_dir / "simple_connections.csv"
+        connections_csv.write_text(connections_csv_content)
+
+        # Import should fail due to missing required fields
+        with pytest.raises(CSVImportError, match="node_name and kind are required"):
+            import_csv_command(
+                db_manager, str(nodes_csv), str(connections_csv), clear_existing=True
+            )

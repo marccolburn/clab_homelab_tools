@@ -1,10 +1,12 @@
 node1,node2,type,node1_interface,node2_interface
 r1,r2,direct,ge-0/0/1,ge-0/0/1
 r1,r3,direct,ge-0/0/2,ge-0/0/1
-r2,r4,bridge,ge-0/0/2,ge-0/0/1
-r3,r4,bridge,ge-0/0/2,ge-0/0/2
+r2,r4,direct,ge-0/0/2,ge-0/0/1
+r3,r4,direct,ge-0/0/2,ge-0/0/2
 r4,r5,direct,ge-0/0/3,ge-0/0/1
 r5,r6,direct,ge-0/0/2,ge-0/0/1
-r1,sw1,bridge,ge-0/0/3,eth1
-r2,sw1,bridge,ge-0/0/3,eth2
+r1,br-allvlans,direct,ge-0/0/3,eth31
+r2,br-allvlans,direct,ge-0/0/3,eth32
+r1,br-mgmt,direct,ge-0/0/4,eth41
+r2,br-mgmt,direct,fxp0,eth01
 sw1,sw2,direct,eth3,eth1

@@ -60,9 +60,21 @@ def import_csv_command(db_manager, nodes_csv, connections_csv, clear_existing):
                     kind = row["kind"].strip()
                     mgmt_ip = row["mgmt_ip"].strip()
 
-                    if not name or not kind or not mgmt_ip:
+                    # Validate required fields (mgmt_ip can be empty for bridge nodes)
+                    if not name or not kind:
                         raise CSVImportError(
-                            f"Empty values not allowed in row {row_num}",
+                            f"node_name and kind are required in row {row_num}",
+                            file_path=nodes_csv,
+                            row_number=row_num,
+                        )
+
+                    # Bridge nodes don't need mgmt_ip, use placeholder
+                    if kind == "bridge" and not mgmt_ip:
+                        mgmt_ip = "N/A"
+                    elif not mgmt_ip:
+                        raise CSVImportError(
+                            f"mgmt_ip is required for non-bridge nodes in row "
+                            f"{row_num}",
                             file_path=nodes_csv,
                             row_number=row_num,
                         )
