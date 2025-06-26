@@ -31,6 +31,10 @@ pip install -r requirements.txt
 echo "Installing development dependencies..."
 pip install -r requirements-dev.txt
 
+# Install the package in development mode
+echo "Installing package in development mode..."
+pip install -e .
+
 # Install pre-commit hooks
 echo "Installing pre-commit hooks..."
 pre-commit install

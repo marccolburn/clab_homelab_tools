@@ -24,6 +24,8 @@ jobs:
         python -m pip install --upgrade pip
         pip install -r requirements.txt
         pip install pytest pytest-cov
+        # Install the package in development mode
+        pip install -e .
 
     - name: Run full test suite
       run: |
@@ -34,9 +36,9 @@ jobs:
         chmod +x clab-tools.sh
         chmod +x install-cli.sh
         # Test basic functionality
-        python main.py import-csv -n example_nodes.csv -c example_connections.csv
-        python main.py show-data
-        python main.py generate-topology -o release_test.yml --validate
+        python clab_tools/main.py import-csv -n example_nodes.csv -c example_connections.csv
+        python clab_tools/main.py show-data
+        python clab_tools/main.py generate-topology -o release_test.yml --validate
 
     - name: Extract version from tag
       id: version
