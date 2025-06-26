@@ -357,7 +357,7 @@ class TestRemoteHostManager:
         manager.disconnect()
         manager.disconnect()
 
-    @patch("clab_tools.remote.get_settings")
+    @patch("clab_tools.config.settings.get_settings")
     def test_factory_function_enabled(self, mock_get_settings):
         """Test factory function with enabled remote settings."""
         mock_settings_obj = Mock()
@@ -369,7 +369,7 @@ class TestRemoteHostManager:
         assert isinstance(manager, RemoteHostManager)
         assert manager.settings == self.settings
 
-    @patch("clab_tools.remote.get_settings")
+    @patch("clab_tools.config.settings.get_settings")
     def test_factory_function_disabled(self, mock_get_settings):
         """Test factory function with disabled remote settings."""
         disabled_settings = RemoteHostSettings(enabled=False)

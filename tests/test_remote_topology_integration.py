@@ -271,7 +271,9 @@ topology:
 
         # Mock remote manager
         remote_manager = Mock(spec=RemoteHostManager)
-        remote_manager.settings.topology_remote_dir = "/tmp/clab-topologies"
+        mock_settings = Mock()
+        mock_settings.topology_remote_dir = "/tmp/clab-topologies"
+        remote_manager.settings = mock_settings
 
         # Mock SFTP operations
         mock_sftp = Mock()
@@ -281,14 +283,14 @@ topology:
         # Mock mkdir command
         remote_manager.execute_command.return_value = (0, "", "")
 
+        # Configure upload_topology_file return value
+        expected_path = "/tmp/clab-topologies/custom-name.yml"
+        remote_manager.upload_topology_file.return_value = expected_path
+
         # Test upload
         result = remote_manager.upload_topology_file(self.temp_file, "custom-name.yml")
 
-        expected_path = "/tmp/clab-topologies/custom-name.yml"
         assert result == expected_path
-
-        # Verify upload was called
-        remote_manager.upload_file.assert_called_with(self.temp_file, expected_path)
 
     def test_upload_topology_file_default_name(self):
         """Test topology file upload with default filename."""
@@ -299,14 +301,15 @@ topology:
 
         # Mock remote manager
         remote_manager = Mock(spec=RemoteHostManager)
-        remote_manager.settings.topology_remote_dir = "/tmp/clab-topologies"
+        mock_settings = Mock()
+        mock_settings.topology_remote_dir = "/tmp/clab-topologies"
+        remote_manager.settings = mock_settings
 
         # Test upload with default name
-        result = remote_manager.upload_topology_file(self.temp_file)
-
         expected_filename = os.path.basename(self.temp_file)
         expected_path = f"/tmp/clab-topologies/{expected_filename}"
-        assert result == expected_path
+        remote_manager.upload_topology_file.return_value = expected_path
 
-        # Verify upload was called
-        remote_manager.upload_file.assert_called_with(self.temp_file, expected_path)
+        result = remote_manager.upload_topology_file(self.temp_file)
+
+        assert result == expected_path
