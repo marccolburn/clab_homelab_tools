@@ -1,0 +1,54 @@
+# Example Local Configuration Override
+# Copy this file to config.local.yaml and customize for your local development
+
+# Database settings - customize for your local environment
+database:
+  url: "sqlite:///my_local_clab.db"    # Change to your preferred database
+  echo: true                           # Enable SQL debugging for development
+
+# Logging settings - customize for your preferences
+logging:
+  level: "DEBUG"                       # Use DEBUG for development, INFO for normal use
+  format: "console"                    # Use "console" for development, "json" for production
+  # file_path: "/tmp/my_clab.log"      # Uncomment to log to file
+
+# Topology settings - customize for your projects
+topology:
+  default_prefix: "mydev"              # Change to your name or project identifier
+  default_mgmt_network: "mydev"        # Match your prefix
+  default_mgmt_subnet: "172.25.0.0/24" # Use a unique subnet to avoid conflicts
+  output_dir: "./my_outputs"           # Change output directory if desired
+
+# Bridge settings - customize for your environment
+bridges:
+  bridge_prefix: "mydev-br"            # Use a unique prefix for your bridges
+  cleanup_on_exit: true                # Enable for development (auto-cleanup)
+
+# General settings
+debug: true                            # Enable debug mode for development
+
+# Example: Override specific settings for different use cases
+#
+# For PostgreSQL database:
+# database:
+#   url: "postgresql://username:password@localhost:5432/my_clab_db"
+#   pool_size: 5
+#
+# For production-like testing:
+# logging:
+#   level: "INFO"
+#   format: "json"
+#   file_path: "/tmp/prod_test.log"
+# debug: false
+#
+# For integration testing:
+# database:
+#   url: "sqlite:///:memory:"  # In-memory database
+# logging:
+#   level: "WARNING"
+#
+# For network isolation testing:
+# topology:
+#   default_mgmt_subnet: "10.200.0.0/16"
+# bridges:
+#   bridge_prefix: "isolated-br"
