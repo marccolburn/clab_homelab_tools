@@ -1,0 +1,9 @@
+node_name,kind,mgmt_ip
+r1,juniper_vjunosrouter,10.100.100.11
+r2,juniper_vjunosrouter,10.100.100.12
+r3,juniper_vjunosrouter,10.100.100.13
+r4,juniper_vjunosrouter,10.100.100.14
+r5,juniper_vjunosrouter,10.100.100.15
+r6,juniper_vjunosrouter,10.100.100.16
+sw1,arista_ceos,10.100.100.20
+sw2,arista_ceos,10.100.100.21

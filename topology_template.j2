@@ -1,0 +1,34 @@
+name: {{ topology_name }}
+prefix: {{ prefix }}
+mgmt:
+  network: {{ mgmt_network }}
+  ipv4-subnet: {{ mgmt_subnet }}
+topology:
+  kinds:
+{%- for kind in unique_kinds %}
+    {{ kind }}:
+      image: "{{ kind_images[kind] }}"
+{%- endfor %}
+  nodes:
+{%- for node_name, node_data in nodes.items() %}
+    {{ node_name }}:
+      kind: {{ node_data.kind }}
+{%- if node_data.kind != 'bridge' %}
+      mgmt-ipv4: {{ node_data.mgmt_ip }}
+{%- if node_data.kind == 'juniper_vjunosrouter' %}
+      env:
+        BOOT_DELAY: 20
+{%- endif %}
+{%- endif %}
+{%- endfor %}
+{%- if links %}
+
+  links:
+{%- for link in links %}
+    - endpoints:
+{%- for endpoint in link.endpoints %}
+        - node: {{ endpoint.node }}
+          interface: {{ endpoint.interface }}
+{%- endfor %}
+{%- endfor %}
+{%- endif %}

@@ -1,0 +1,93 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.10'
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        pip install pytest pytest-cov
+
+    - name: Run full test suite
+      run: |
+        pytest tests/ -v --cov=clab_tools --cov-report=term
+
+    - name: Test CLI installation
+      run: |
+        chmod +x clab-tools.sh
+        chmod +x install-cli.sh
+        # Test basic functionality
+        python main.py import-csv -n example_nodes.csv -c example_connections.csv
+        python main.py show-data
+        python main.py generate-topology -o release_test.yml --validate
+
+    - name: Extract version from tag
+      id: version
+      run: echo "VERSION=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
+
+    - name: Create Release
+      uses: actions/create-release@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        tag_name: ${{ github.ref }}
+        release_name: Release v${{ steps.version.outputs.VERSION }}
+        body: |
+          ## Changes in v${{ steps.version.outputs.VERSION }}
+
+          This release includes all changes merged to main since the previous release.
+
+          ### Installation
+          ```bash
+          git clone <repository-url>
+          cd clab_homelab_tools
+          ./scripts/setup-dev.sh
+          ./install-cli.sh
+          ```
+
+          ### Usage
+          ```bash
+          clab-tools --help
+          ```
+
+          See the [documentation](docs/) for detailed usage instructions.
+
+        draft: false
+        prerelease: false
+
+    - name: Upload CLI Script
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ steps.create_release.outputs.upload_url }}
+        asset_path: ./clab-tools.sh
+        asset_name: clab-tools.sh
+        asset_content_type: application/x-sh
+
+    - name: Upload Installation Script
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ steps.create_release.outputs.upload_url }}
+        asset_path: ./install-cli.sh
+        asset_name: install-cli.sh
+        asset_content_type: application/x-sh

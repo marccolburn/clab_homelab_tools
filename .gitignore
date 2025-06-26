@@ -1,0 +1,97 @@
+# Python bytecode and cache
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual environments
+.venv/
+venv/
+.env
+
+# Testing and coverage
+.pytest_cache/
+.coverage
+.coverage.*
+htmlcov/
+.cache
+
+# IDE and editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# macOS files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+
+# Project-specific files
+# Database files (user data)
+*.db
+*.sqlite
+*.sqlite3
+clab_topology.db*
+
+# Log files
+*.log
+logs/
+
+# Configuration files with sensitive data
+config_private.yaml
+*.secret
+
+# Generated topology files (user output)
+generated_*.yml
+generated_*.yaml
+output_*.yml
+output_*.yaml
+
+# User CSV files (not examples)
+user_*.csv
+import_*.csv
+nodes_*.csv
+connections_*.csv
+
+# Backup files
+*.bak
+*.backup
+*~
+
+# Containerlab files
+.clab.yml
+*.clab.yml
+clab-*/
+
+# Temporary files
+tmp/
+temp/
+.tmp/
+.temp/
+
+# Additional output files
+*.lab.yml
+*.lab.yaml
+lab_*.yml
+lab_*.yaml
+topology_*.yml
+topology_*.yaml
+
+# Database files (additional patterns)
+*.db-journal
+*.db-wal
+*.db-shm
+
+# Python package build artifacts
+build/
+dist/
+*.egg-info/
+
+# Jupyter notebooks (if any)
+.ipynb_checkpoints/
+
+# Environment variables
+.env.local
+.env.*.local
