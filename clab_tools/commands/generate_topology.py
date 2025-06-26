@@ -9,6 +9,7 @@ import sys
 
 import click
 
+from ..config.settings import get_settings
 from ..remote import get_remote_host_manager
 from ..topology.generator import TopologyGenerator
 
@@ -40,6 +41,13 @@ def generate_topology_command(
         validate: Whether to validate the generated YAML
         upload_remote: Whether to upload to remote host
     """
+    # Use config default prefix if none specified
+    if prefix is None:
+        settings = get_settings()
+        prefix = settings.topology.default_prefix
+    elif prefix.lower() == "none":
+        prefix = ""
+
     generator = TopologyGenerator(db_manager, template, kinds_config)
 
     click.echo("=== Topology Generation ===")
@@ -110,7 +118,12 @@ def generate_topology_command(
 @click.command()
 @click.option("--output", "-o", default="clab.yml", help="Output topology file name")
 @click.option("--topology-name", "-t", default="generated_lab", help="Topology name")
-@click.option("--prefix", "-p", default="_lab", help="Topology prefix")
+@click.option(
+    "--prefix",
+    "-p",
+    default=None,
+    help="Topology prefix (defaults to config setting, use 'none' for no prefix)",
+)
 @click.option(
     "--mgmt-network", "-m", default="mgmtclab", help="Management network name"
 )
