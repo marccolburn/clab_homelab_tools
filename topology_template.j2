@@ -25,7 +25,8 @@ topology:
 
   links:
 {%- for link in links %}
-    - endpoints:
+    - type: veth
+      endpoints:
 {%- for endpoint in link.endpoints %}
         - node: {{ endpoint.node }}
           interface: {{ endpoint.interface }}
