@@ -15,7 +15,7 @@ while [ -L "$SCRIPT_PATH" ]; do
 done
 SCRIPT_DIR="$(cd "$(dirname "$SCRIPT_PATH")" && pwd)"
 PYTHON_CMD="$SCRIPT_DIR/.venv/bin/python"
-MAIN_SCRIPT="$SCRIPT_DIR/main.py"
+MAIN_SCRIPT="$SCRIPT_DIR/clab_tools/main.py"
 
 # Check if virtual environment exists
 if [ ! -f "$PYTHON_CMD" ]; then

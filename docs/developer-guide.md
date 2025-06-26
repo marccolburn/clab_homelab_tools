@@ -292,7 +292,7 @@ touch clab_tools/commands/my_command.py
 ```python
 # clab_tools/commands/my_command.py
 import click
-from clab_tools.logging import get_logger
+from clab_tools.log_config import get_logger
 
 logger = get_logger(__name__)
 
@@ -360,7 +360,7 @@ class TestMyFeature:
 ### Example:
 ```python
 from typing import List, Optional
-from clab_tools.logging import get_logger
+from clab_tools.log_config import get_logger
 
 logger = get_logger(__name__)
 

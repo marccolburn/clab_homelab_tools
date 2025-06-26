@@ -18,12 +18,12 @@ jobs:
     - uses: actions/checkout@v4
 
     - name: Set up Python ${{ matrix.python-version }}
-      uses: actions/setup-python@v4
+      uses: actions/setup-python@v5
       with:
         python-version: ${{ matrix.python-version }}
 
     - name: Cache pip dependencies
-      uses: actions/cache@v3
+      uses: actions/cache@v4
       with:
         path: ~/.cache/pip
         key: ${{ runner.os }}-pip-${{ hashFiles('requirements.txt') }}
@@ -35,13 +35,15 @@ jobs:
         python -m pip install --upgrade pip
         pip install -r requirements.txt
         pip install pytest pytest-cov
+        # Install the package in development mode
+        pip install -e .
 
     - name: Test with pytest
       run: |
         pytest tests/ -v --cov=clab_tools --cov-report=term --cov-report=html
 
     - name: Upload coverage report
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       if: matrix.os == 'ubuntu-latest' && matrix.python-version == '3.10'
       with:
         name: coverage-report
@@ -55,7 +57,7 @@ jobs:
     - uses: actions/checkout@v4
 
     - name: Set up Python
-      uses: actions/setup-python@v4
+      uses: actions/setup-python@v5
       with:
         python-version: '3.10'
 
@@ -63,6 +65,8 @@ jobs:
       run: |
         python -m pip install --upgrade pip
         pip install -r requirements.txt
+        # Install the package in development mode
+        pip install -e .
 
     - name: Test CLI installation
       run: |
@@ -74,9 +78,9 @@ jobs:
 
     - name: Test basic workflow
       run: |
-        python main.py import-csv -n example_nodes.csv -c example_connections.csv
-        python main.py show-data
-        python main.py generate-topology -o test_topology.yml --validate
+        python clab_tools/main.py import-csv -n example_nodes.csv -c example_connections.csv
+        python clab_tools/main.py show-data
+        python clab_tools/main.py generate-topology -o test_topology.yml --validate
 
         # Verify output file was created
         test -f test_topology.yml

@@ -18,7 +18,7 @@ from clab_tools.commands.import_csv import import_csv
 from clab_tools.config.settings import initialize_settings
 from clab_tools.db.manager import DatabaseManager
 from clab_tools.errors.handlers import error_handler
-from clab_tools.logging.logger import get_logger, setup_logging
+from clab_tools.log_config.logger import get_logger, setup_logging
 
 
 @click.group()
