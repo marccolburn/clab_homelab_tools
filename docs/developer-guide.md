@@ -14,7 +14,7 @@ Guide for developers working on the Containerlab Homelab Tools project.
 
 ```bash
 # Clone repository
-git clone <repository-url>
+git clone https://github.com/marccolburn/clab_homelab_tools.git
 cd clab_homelab_tools
 
 # Create development environment

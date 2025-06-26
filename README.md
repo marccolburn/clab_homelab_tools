@@ -16,7 +16,7 @@ A comprehensive CLI utility for managing containerlab network topologies with pe
 
 ```bash
 # Clone and setup
-git clone <repository-url>
+git clone https://github.com/marccolburn/clab_homelab_tools.git
 cd clab_homelab_tools
 python3 -m venv .venv
 source .venv/bin/activate
@@ -80,4 +80,4 @@ git checkout -b feature/your-feature
 
 ## License
 
-[Specify your license here]
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.

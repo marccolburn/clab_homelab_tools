@@ -12,7 +12,7 @@
 ### 1. Clone Repository
 
 ```bash
-git clone <repository-url>
+git clone https://github.com/marccolburn/clab_homelab_tools.git
 cd clab_homelab_tools
 ```
 
@@ -119,7 +119,7 @@ For contributors and developers:
 
 ```bash
 # Clone repository
-git clone <repository-url>
+git clone https://github.com/marccolburn/clab_homelab_tools.git
 cd clab_homelab_tools
 
 # Create development environment
