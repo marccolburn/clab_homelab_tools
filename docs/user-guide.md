@@ -18,15 +18,18 @@ node_name,kind,mgmt_ip
 r1,juniper_vjunosrouter,10.100.100.11
 r2,juniper_vjunosrouter,10.100.100.12
 sw1,arista_ceos,10.100.100.20
+br-access,bridge,
 ```
 
 **connections.csv**
 ```csv
 node1,node2,type,node1_interface,node2_interface
 r1,r2,direct,ge-0/0/1,ge-0/0/1
-r1,sw1,bridge,ge-0/0/2,eth1
-r2,sw1,bridge,ge-0/0/2,eth2
+r1,br-access,direct,ge-0/0/2,eth21
+r2,br-access,direct,ge-0/0/2,eth22
 ```
+
+> **Note**: This uses the simplified bridge approach where bridges are nodes with `kind=bridge`. Bridge interface names follow the pattern `eth{last_digit_of_node1_interface}{node_id}`. See [Simplified Bridge Guide](simplified-bridge-guide.md) for details.
 
 ### 2. Import Data
 
@@ -42,21 +45,21 @@ python main.py import-csv -n nodes.csv -c connections.csv --clear-existing
 python main.py show-data
 ```
 
-### 4. Generate Topology
+### 4. Create Bridges (Optional)
+
+```bash
+# Create VLAN-capable bridges on the host system
+python main.py create-bridges --dry-run  # Preview first
+python main.py create-bridges            # Create the bridges
+```
+
+This creates Linux bridges with full VLAN support (VLANs 1-4094) for any bridge nodes defined in your topology.
+
+### 5. Generate Topology
 
 ```bash
 # Generate containerlab topology file
 python main.py generate-topology -o my_lab.yml -t "production_lab" --validate
-```
-
-### 5. Create Bridges (Optional)
-
-```bash
-# Preview bridge creation
-python main.py create-bridges --dry-run
-
-# Create bridges (requires root)
-sudo python main.py create-bridges
 ```
 
 ### 6. Deploy with Containerlab
@@ -268,8 +271,15 @@ sw1,sw2,direct,eth3,eth1
 
 ### Connection Types
 
-- **direct**: Creates a direct point-to-point connection between two nodes
-- **bridge**: Creates a unique bridge node for each connection and connects both specified nodes to it
+- **direct**: Creates a direct point-to-point connection between two nodes (including bridge nodes)
+
+**Bridge Connections**: To connect nodes to bridges, reference the bridge by name in the `node2` column and use the bridge interface naming convention `eth{last_digit}{node_id}`.
+
+**Examples:**
+- `r1,r2,direct,ge-0/0/1,ge-0/0/1` - Direct router-to-router connection
+- `r1,br-access,direct,ge-0/0/2,eth21` - Router r1 to bridge (interface naming: last digit 2 + node ID 1)
+
+For detailed bridge configuration, see the [Simplified Bridge Guide](simplified-bridge-guide.md).
 
 ## Advanced Usage
 

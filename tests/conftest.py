@@ -90,6 +90,33 @@ router2,switch1,veth,eth2,eth2
 
 
 @pytest.fixture
+def sample_bridge_nodes_csv(temp_dir):
+    """Create a sample nodes CSV file with bridge nodes."""
+    csv_content = """node_name,kind,mgmt_ip
+router1,nokia_srlinux,172.20.20.10
+router2,cisco_xrd,172.20.20.11
+br-main,bridge,
+br-access,bridge,N/A
+"""
+    csv_file = temp_dir / "bridge_nodes.csv"
+    csv_file.write_text(csv_content)
+    return str(csv_file)
+
+
+@pytest.fixture
+def sample_bridge_connections_csv(temp_dir):
+    """Create a sample connections CSV file for bridge topology."""
+    csv_content = """node1,node2,type,node1_interface,node2_interface
+router1,br-main,veth,eth1,eth1
+router2,br-main,veth,eth1,eth2
+br-main,br-access,veth,trunk1,trunk1
+"""
+    csv_file = temp_dir / "bridge_connections.csv"
+    csv_file.write_text(csv_content)
+    return str(csv_file)
+
+
+@pytest.fixture
 def invalid_nodes_csv(temp_dir):
     """Create an invalid nodes CSV file (missing required columns)."""
     csv_content = """name,type,ip

@@ -23,6 +23,44 @@ class TestDatabaseManager:
         assert len(nodes) == 1
         assert nodes[0] == ("test-router", "nokia_srlinux", "172.20.20.10")
 
+    def test_insert_bridge_node_with_na_ip(self, db_manager):
+        """Test inserting bridge node with N/A management IP."""
+        # Insert bridge node
+        result = db_manager.insert_node("br-main", "bridge", "N/A")
+        assert result is True
+
+        # Retrieve nodes
+        nodes = db_manager.get_all_nodes()
+        assert len(nodes) == 1
+        assert nodes[0] == ("br-main", "bridge", "N/A")
+
+        # Verify we can get it by name
+        node = db_manager.get_node_by_name("br-main")
+        assert node is not None
+        assert node.name == "br-main"
+        assert node.kind == "bridge"
+        assert node.mgmt_ip == "N/A"
+
+    def test_get_bridge_nodes_by_kind(self, db_manager):
+        """Test getting bridge nodes specifically."""
+        # Insert mixed node types
+        db_manager.insert_node("router1", "nokia_srlinux", "172.20.20.10")
+        db_manager.insert_node("router2", "cisco_xrd", "172.20.20.11")
+        db_manager.insert_node("br-main", "bridge", "N/A")
+        db_manager.insert_node("br-access", "bridge", "N/A")
+
+        # Get only bridge nodes
+        bridge_nodes = db_manager.get_nodes_by_kind("bridge")
+        assert len(bridge_nodes) == 2
+        bridge_names = [node.name for node in bridge_nodes]
+        assert "br-main" in bridge_names
+        assert "br-access" in bridge_names
+
+        # Verify all are bridge type
+        for node in bridge_nodes:
+            assert node.kind == "bridge"
+            assert node.mgmt_ip == "N/A"
+
     def test_insert_duplicate_node(self, db_manager):
         """Test inserting a node with duplicate name updates existing."""
         # Insert original node
