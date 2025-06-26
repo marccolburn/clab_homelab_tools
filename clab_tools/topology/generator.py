@@ -24,8 +24,22 @@ class TopologyGenerator:
         kinds_file="supported_kinds.yaml",
     ):
         self.db = db_manager
-        self.template_file = Path(template_file)
-        self.kinds_file = Path(kinds_file)
+
+        # Resolve template file path relative to package root if it's a relative path
+        template_path = Path(template_file)
+        if not template_path.is_absolute():
+            # Get the package root directory (where the template should be)
+            package_root = Path(__file__).parent.parent.parent
+            template_path = package_root / template_file
+        self.template_file = template_path
+
+        # Resolve kinds file path relative to package root if it's a relative path
+        kinds_path = Path(kinds_file)
+        if not kinds_path.is_absolute():
+            # Get the package root directory (where the kinds file should be)
+            package_root = Path(__file__).parent.parent.parent
+            kinds_path = package_root / kinds_file
+        self.kinds_file = kinds_path
 
     def load_supported_kinds(self):
         """Load supported device kinds from YAML configuration file."""
