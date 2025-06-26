@@ -13,6 +13,7 @@ import click
 
 from clab_tools.commands.bridge_commands import (
     cleanup_bridges,
+    configure_vlans,
     create_bridges,
     list_bridges,
 )
@@ -134,6 +135,7 @@ cli.add_command(import_csv)
 cli.add_command(generate_topology)
 cli.add_command(create_bridges)
 cli.add_command(cleanup_bridges)
+cli.add_command(configure_vlans)
 cli.add_command(list_bridges)
 cli.add_command(show_data)
 cli.add_command(clear_data)
