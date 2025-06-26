@@ -104,6 +104,12 @@ class RemoteHostSettings(BaseSettings):
         description="Remote directory for topology files",
     )
     timeout: int = Field(default=30, description="SSH connection timeout in seconds")
+    use_sudo: bool = Field(
+        default=True, description="Use sudo for bridge management commands"
+    )
+    sudo_password: Optional[str] = Field(
+        default=None, description="Sudo password (if different from SSH password)"
+    )
 
     model_config = ConfigDict(env_prefix="CLAB_REMOTE_")
 

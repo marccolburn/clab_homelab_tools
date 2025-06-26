@@ -113,7 +113,16 @@ class RemoteHostManager:
             raise RemoteHostError("Not connected to remote host")
 
         try:
-            stdin, stdout, stderr = self._ssh_client.exec_command(command)
+            # Check if command uses sudo and we have a sudo password
+            if command.strip().startswith("sudo") and self.settings.sudo_password:
+                # Use echo to provide sudo password via stdin
+                password = self.settings.sudo_password
+                cmd_without_sudo = command[4:].strip()
+                full_command = f"echo '{password}' | sudo -S {cmd_without_sudo}"
+            else:
+                full_command = command
+
+            stdin, stdout, stderr = self._ssh_client.exec_command(full_command)
             exit_code = stdout.channel.recv_exit_status()
             stdout_text = stdout.read().decode("utf-8")
             stderr_text = stderr.read().decode("utf-8")

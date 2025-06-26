@@ -35,6 +35,10 @@ remote:
   port: 22
   topology_remote_dir: "/tmp/clab-topologies"
   timeout: 30
+
+  # Sudo settings
+  use_sudo: true                 # Use sudo for bridge commands (default: true)
+  sudo_password: "sudo-pass"     # Sudo password if different from SSH password (optional)
 ```
 
 ### Environment Variables
@@ -104,89 +108,117 @@ remote:
 
 ```bash
 # Test remote host connection
-clab-tools remote-test --remote-host 192.168.1.100 --remote-user clab-user --enable-remote
+clab-tools remote test-connection --host 192.168.1.100 --username clab-user
 
 # Show current remote configuration
-clab-tools remote-config
+clab-tools remote show-config
 ```
 
 ### Bridge Management on Remote Host
 
 ```bash
 # Create bridges on remote host
-clab-tools --enable-remote create-bridges
+clab-tools --enable-remote --remote-host 192.168.1.100 --remote-user clab-user create-bridges
 
 # List bridge status on remote host
-clab-tools --enable-remote list-bridges
+clab-tools --enable-remote --remote-host 192.168.1.100 --remote-user clab-user list-bridges
 
 # Delete bridges on remote host
-clab-tools --enable-remote delete-bridges
+clab-tools --enable-remote --remote-host 192.168.1.100 --remote-user clab-user cleanup-bridges
 ```
 
 ### Topology Generation with Remote Upload
 
 ```bash
 # Generate topology and upload to remote host
-clab-tools generate-topology --upload --remote-host 192.168.1.100 --enable-remote
+clab-tools --enable-remote --remote-host 192.168.1.100 --remote-user clab-user generate-topology --upload
 
 # Generate with custom output and upload
-clab-tools generate-topology -o my-lab.yml --upload --enable-remote
+clab-tools --enable-remote --remote-host 192.168.1.100 --remote-user clab-user generate-topology -o my-lab.yml --upload
 ```
 
-### File Operations
+### Remote File Operations
 
 ```bash
-# Upload a file to remote host
-clab-tools remote-upload /local/path/topology.yml /remote/path/topology.yml
+# Upload a topology file to remote host
+clab-tools remote upload-topology /local/path/topology.yml
+
+# Upload with custom remote path
+clab-tools remote upload-topology /local/path/topology.yml --remote-path /custom/path/topology.yml
 
 # Execute command on remote host
-clab-tools remote-exec "clab deploy -t /tmp/clab-topologies/topology.yml"
+clab-tools remote execute "clab deploy -t /tmp/clab-topologies/topology.yml"
 ```
 
 ## CLI Commands
 
-### Remote-Specific Commands
+The remote host functionality is accessed through the `remote` command group and global remote options.
 
-#### `remote-test`
-Test connection to remote host.
+### Remote Command Group
 
-```bash
-clab-tools remote-test [OPTIONS]
-```
-
-#### `remote-config`
-Display current remote host configuration.
+#### `remote test-connection`
+Test connection to remote containerlab host.
 
 ```bash
-clab-tools remote-config
-```
-
-#### `remote-upload`
-Upload files to remote host.
-
-```bash
-clab-tools remote-upload [OPTIONS] LOCAL_PATH REMOTE_PATH
+clab-tools remote test-connection [OPTIONS]
 ```
 
 Options:
-- `--create-dirs` - Create remote directories if they don't exist
+- `--host, -h` - Remote host IP or hostname
+- `--username, -u` - SSH username
+- `--password, -p` - SSH password
+- `--private-key, -k` - SSH private key file path
+- `--port` - SSH port (default: 22)
 
-#### `remote-exec`
-Execute commands on remote host.
+#### `remote show-config`
+Show current remote host configuration.
 
 ```bash
-clab-tools remote-exec [OPTIONS] COMMAND
+clab-tools remote show-config
+```
+
+#### `remote upload-topology`
+Upload topology file to remote containerlab host.
+
+```bash
+clab-tools remote upload-topology [OPTIONS] LOCAL_FILE
 ```
 
 Options:
-- `--dry-run` - Show what would be executed without running
+- `--remote-path, -r` - Remote file path (default: topology directory)
+- `--host, -h` - Remote host IP or hostname
+- `--username, -u` - SSH username
+- `--password, -p` - SSH password
 
-### Modified Existing Commands
+#### `remote execute`
+Execute a command on the remote containerlab host.
+
+```bash
+clab-tools remote execute [OPTIONS] COMMAND
+```
+
+Options:
+- `--host, -h` - Remote host IP or hostname
+- `--username, -u` - SSH username
+- `--password, -p` - SSH password
+
+### Global Remote Options
+
+All main commands support these global remote options:
+
+- `--enable-remote` - Enable remote host operations
+- `--remote-host` - Remote containerlab host IP/hostname
+- `--remote-user` - Remote host username
+- `--remote-password` - Remote host password
+- `--remote-port` - Remote host SSH port
+- `--remote-key` - Path to SSH private key file
+
+### Enhanced Existing Commands
 
 All bridge management commands now support remote operation when remote host is configured:
 
 - `create-bridges` - Create bridges on local or remote host
-- `delete-bridges` - Delete bridges on local or remote host
+- `cleanup-bridges` - Delete bridges on local or remote host
 - `list-bridges` - List bridges on local or remote host
 
 The `generate-topology` command has a new `--upload` option to automatically upload generated topology files to the remote host.
