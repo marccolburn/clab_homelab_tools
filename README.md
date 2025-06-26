@@ -37,6 +37,7 @@ clab-tools --help  # Use from anywhere
 - 📖 **[Installation Guide](docs/installation.md)** - Setup and system-wide CLI installation
 - 🎯 **[User Guide](docs/user-guide.md)** - Complete usage instructions and workflows
 - ⚙️ **[Configuration](docs/configuration.md)** - Settings and customization options
+- 🔧 **[Configuration Override Patterns](docs/configuration-override-patterns.md)** - Local development and team configuration patterns
 - 🏗️ **[Developer Guide](docs/developer-guide.md)** - Development setup and testing
 - 🔄 **[Development Workflow](docs/development-workflow.md)** - Git workflow, CI/CD, and contribution process
 - 🏛️ **[Architecture](docs/architecture.md)** - Project structure and design

@@ -43,6 +43,19 @@ logs/
 config_private.yaml
 *.secret
 
+# Local configuration overrides (recommended patterns)
+config.local.yaml
+config.*.local.yaml
+*.local.yaml
+.env.local
+.env.*.local
+
+# User-specific configs (if using name-based pattern)
+# Uncomment if your team uses config.username.yaml pattern:
+# config.*.yaml
+# !config.example.yaml
+# !config.template.yaml
+
 # Generated topology files (user output)
 generated_*.yml
 generated_*.yaml
@@ -91,7 +104,3 @@ dist/
 
 # Jupyter notebooks (if any)
 .ipynb_checkpoints/
-
-# Environment variables
-.env.local
-.env.*.local
