@@ -6,7 +6,8 @@ A comprehensive CLI utility for managing containerlab network topologies with pe
 
 - **CSV Import**: Import node and connection data from CSV files
 - **Topology Generation**: Generate containerlab YAML files from database data
-- **Bridge Management**: Create and manage Linux bridges on the host system
+- **Bridge Management**: Create and manage Linux bridges on local or remote systems
+- **Remote Host Support**: Execute commands and manage bridges on remote containerlab hosts
 - **Configuration Management**: YAML config files and environment variables
 - **Structured Logging**: Professional logging with Rich console output
 - **Database Storage**: SQLAlchemy-based persistent storage
@@ -36,6 +37,7 @@ clab-tools --help  # Use from anywhere
 - 🎯 **[Project Workflows & Architecture](docs/workflows-and-architecture.md)** - **START HERE** for clear workflow diagrams
 - 📖 **[Installation Guide](docs/installation.md)** - Setup and system-wide CLI installation
 - 🎯 **[User Guide](docs/user-guide.md)** - Complete usage instructions and workflows
+- 🌐 **[Remote Host Management](docs/remote-host-management.md)** - Configure and use remote containerlab hosts
 - ⚙️ **[Configuration](docs/configuration.md)** - Settings and customization options
 - 🔧 **[Configuration Override Patterns](docs/configuration-override-patterns.md)** - Local development and team configuration patterns
 - 🏗️ **[Developer Guide](docs/developer-guide.md)** - Development setup and testing
@@ -57,8 +59,17 @@ python main.py show-data
 # Generate containerlab topology
 python main.py generate-topology -o lab.yml
 
-# Create host bridges (requires root)
+# Generate and upload to remote host
+python main.py generate-topology --upload --remote-host 192.168.1.100 --enable-remote
+
+# Create host bridges (requires root) - local
 sudo python main.py create-bridges
+
+# Create bridges on remote host
+python main.py create-bridges --remote-host 192.168.1.100 --enable-remote
+
+# Test remote host connection
+python main.py remote-test --remote-host 192.168.1.100 --remote-user clab-user --enable-remote
 ```
 
 For detailed usage instructions, see the [User Guide](docs/user-guide.md).

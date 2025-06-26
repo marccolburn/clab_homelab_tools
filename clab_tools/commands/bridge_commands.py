@@ -1,12 +1,13 @@
 """
 Bridge Commands
 
-Handles creating and managing Linux bridges on the host system.
+Handles creating and managing Linux bridges on the host system or remote hosts.
 """
 
 import click
 
 from ..bridges.manager import BridgeManager
+from ..remote import get_remote_host_manager
 
 
 def create_bridges_command(db_manager, dry_run, force):
@@ -18,9 +19,22 @@ def create_bridges_command(db_manager, dry_run, force):
         dry_run: Whether to show what would be done without making changes
         force: Whether to proceed without confirmation prompts
     """
-    bridge_manager = BridgeManager(db_manager)
+    # Get remote host manager if configured
+    remote_manager = get_remote_host_manager()
 
-    click.echo("=== Bridge Creation ===")
+    if remote_manager:
+        with remote_manager:
+            bridge_manager = BridgeManager(db_manager, remote_manager)
+            _execute_bridge_creation(bridge_manager, dry_run, force, remote=True)
+    else:
+        bridge_manager = BridgeManager(db_manager)
+        _execute_bridge_creation(bridge_manager, dry_run, force, remote=False)
+
+
+def _execute_bridge_creation(bridge_manager, dry_run, force, remote=False):
+    """Execute bridge creation with given manager."""
+    location = "remote host" if remote else "local system"
+    click.echo(f"=== Bridge Creation ({location}) ===")
 
     # Get list of required bridges
     required_bridges = bridge_manager.get_bridge_list_from_db()
@@ -39,93 +53,131 @@ def create_bridges_command(db_manager, dry_run, force):
     missing_bridges = bridge_manager.get_missing_bridges()
 
     if not missing_bridges:
-        click.echo("✓ All required bridges already exist!")
+        click.echo(f"✓ All required bridges already exist on {location}!")
         return
 
-    click.echo(f"\nNeed to create {len(missing_bridges)} bridges:")
+    click.echo(f"\nNeed to create {len(missing_bridges)} bridges on {location}:")
     for bridge in missing_bridges:
         click.echo(f"  - {bridge}")
 
     if not dry_run and not force:
-        if not click.confirm(
-            f"\nProceed with creating {len(missing_bridges)} bridges?"
-        ):
-            click.echo("Aborted.")
+        if not click.confirm(f"Create {len(missing_bridges)} bridges on {location}?"):
+            click.echo("Bridge creation cancelled.")
             return
 
-    if dry_run:
-        click.echo("\n=== DRY RUN MODE ===")
+    # Create bridges
+    success, message = bridge_manager.create_all_bridges(dry_run=dry_run, force=True)
 
-    # Create missing bridges
-    success_count = 0
-    for bridge in missing_bridges:
-        success, message = bridge_manager.create_bridge(bridge, dry_run)
-        if success:
-            click.echo(f"✓ {message}")
-            success_count += 1
-        else:
-            click.echo(f"✗ {message}")
-
-    if not dry_run:
-        click.echo("\n=== Creation Complete ===")
-        click.echo(
-            f"Successfully created {success_count}/{len(missing_bridges)} bridges"
-        )
-        if success_count < len(missing_bridges):
-            click.echo(
-                "Some bridges failed to create. Check permissions and try again."
-            )
+    if success:
+        click.echo(f"✓ {message}")
+    else:
+        click.echo(f"✗ {message}")
 
 
-def cleanup_bridges_command(db_manager, dry_run, force):
+def delete_bridges_command(db_manager, dry_run, force):
     """
-    Remove Linux bridges created by this tool.
+    Delete Linux bridges from the system.
 
     Args:
         db_manager: Database manager instance
         dry_run: Whether to show what would be done without making changes
         force: Whether to proceed without confirmation prompts
     """
-    bridge_manager = BridgeManager(db_manager)
+    # Get remote host manager if configured
+    remote_manager = get_remote_host_manager()
 
-    click.echo("=== Bridge Cleanup ===")
+    if remote_manager:
+        with remote_manager:
+            bridge_manager = BridgeManager(db_manager, remote_manager)
+            _execute_bridge_deletion(bridge_manager, dry_run, force, remote=True)
+    else:
+        bridge_manager = BridgeManager(db_manager)
+        _execute_bridge_deletion(bridge_manager, dry_run, force, remote=False)
 
-    # Find existing bridges that match our pattern
+
+def _execute_bridge_deletion(bridge_manager, dry_run, force, remote=False):
+    """Execute bridge deletion with given manager."""
+    location = "remote host" if remote else "local system"
+    click.echo(f"=== Bridge Deletion ({location}) ===")
+
+    # Get list of existing bridges
     existing_bridges = bridge_manager.get_existing_bridges()
 
     if not existing_bridges:
-        click.echo("No matching bridges found to remove.")
+        click.echo(f"No bridges found on {location}.")
         return
 
-    click.echo(f"Found {len(existing_bridges)} bridges to remove:")
+    click.echo(f"Found {len(existing_bridges)} bridges on {location}:")
     for bridge in existing_bridges:
         click.echo(f"  - {bridge}")
 
     if not dry_run and not force:
         if not click.confirm(
-            f"\nProceed with removing {len(existing_bridges)} bridges?"
+            f"Delete {len(existing_bridges)} bridges from {location}?"
         ):
-            click.echo("Aborted.")
+            click.echo("Bridge deletion cancelled.")
             return
 
-    if dry_run:
-        click.echo("\n=== DRY RUN MODE ===")
+    # Delete bridges
+    success, message = bridge_manager.delete_all_bridges(dry_run=dry_run, force=True)
 
-    # Remove bridges
-    success_count = 0
-    for bridge in existing_bridges:
-        success, message = bridge_manager.delete_bridge(bridge, dry_run)
-        if success:
-            click.echo(f"✓ {message}")
-            success_count += 1
-        else:
-            click.echo(f"✗ {message}")
+    if success:
+        click.echo(f"✓ {message}")
+    else:
+        click.echo(f"✗ {message}")
 
-    if not dry_run:
-        click.echo("\n=== Cleanup Complete ===")
-        click.echo(
-            f"Successfully removed {success_count}/{len(existing_bridges)} bridges"
-        )
+
+def list_bridges_command(db_manager):
+    """
+    List bridge status on the system.
+
+    Args:
+        db_manager: Database manager instance
+    """
+    # Get remote host manager if configured
+    remote_manager = get_remote_host_manager()
+
+    if remote_manager:
+        with remote_manager:
+            bridge_manager = BridgeManager(db_manager, remote_manager)
+            _execute_bridge_listing(bridge_manager, remote=True)
+    else:
+        bridge_manager = BridgeManager(db_manager)
+        _execute_bridge_listing(bridge_manager, remote=False)
+
+
+def _execute_bridge_listing(bridge_manager, remote=False):
+    """Execute bridge listing with given manager."""
+    location = "remote host" if remote else "local system"
+    click.echo(f"=== Bridge Status ({location}) ===")
+
+    # Get required bridges from database
+    required_bridges = bridge_manager.get_bridge_list_from_db()
+    existing_bridges = bridge_manager.get_existing_bridges()
+    missing_bridges = bridge_manager.get_missing_bridges()
+
+    if not required_bridges:
+        click.echo("No bridge connections found in topology database.")
+        return
+
+    click.echo(f"\nRequired bridges: {len(required_bridges)}")
+    click.echo(f"Existing bridges: {len(existing_bridges)}")
+    click.echo(f"Missing bridges: {len(missing_bridges)}")
+
+    if required_bridges:
+        click.echo(f"\nBridge Status on {location}:")
+        for bridge in required_bridges:
+            exists = bridge_manager.check_bridge_exists(bridge)
+            status = "✓" if exists else "✗"
+            state = "EXISTS" if exists else "MISSING"
+            click.echo(f"  {status} {bridge} [{state}]")
+
+    if missing_bridges:
+        click.echo("\nMissing bridges that need to be created:")
+        for bridge in missing_bridges:
+            click.echo(f"  - {bridge}")
+    else:
+        click.echo("\n✓ All required bridges exist on {}".format(location))
 
 
 @click.command()
@@ -140,6 +192,7 @@ def create_bridges(ctx, dry_run, force):
 
     This command will create all bridges required by the topology stored in
     the database. Requires root privileges to create network interfaces.
+    Supports both local and remote host operations.
     """
     db_manager = ctx.obj["db_manager"]
     create_bridges_command(db_manager, dry_run, force)
@@ -151,12 +204,31 @@ def create_bridges(ctx, dry_run, force):
 )
 @click.option("--force", is_flag=True, help="Proceed without confirmation prompts")
 @click.pass_context
-def cleanup_bridges(ctx, dry_run, force):
+def delete_bridges(ctx, dry_run, force):
     """
-    Remove Linux bridges created by this tool.
+    Delete Linux bridges from the system.
 
-    This command will remove bridges that match the naming pattern used by this tool.
-    Use with caution - only removes bridges matching br-* pattern.
+    This command will remove bridges that are tracked in the database.
+    Use with caution - removes bridges based on topology data.
+    Supports both local and remote host operations.
     """
     db_manager = ctx.obj["db_manager"]
-    cleanup_bridges_command(db_manager, dry_run, force)
+    delete_bridges_command(db_manager, dry_run, force)
+
+
+@click.command()
+@click.pass_context
+def list_bridges(ctx):
+    """
+    List bridge status on the system.
+
+    This command shows the status of bridges required by the topology
+    and indicates which ones exist and which are missing.
+    Supports both local and remote host operations.
+    """
+    db_manager = ctx.obj["db_manager"]
+    list_bridges_command(db_manager)
+
+
+# Legacy command names for backward compatibility
+cleanup_bridges = delete_bridges

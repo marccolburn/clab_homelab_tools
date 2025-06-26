@@ -3,18 +3,23 @@ Bridge Manager
 
 Handles Linux bridge operations on the host system including creation,
 deletion, and management of network bridges based on topology data.
+Supports both local and remote bridge operations.
 """
 
 import subprocess
+from typing import Optional
 
 import click
 
+from clab_tools.remote import RemoteHostManager
+
 
 class BridgeManager:
-    """Manages Linux bridge operations on the host system."""
+    """Manages Linux bridge operations on the host system or remote host."""
 
-    def __init__(self, db_manager):
+    def __init__(self, db_manager, remote_manager: Optional[RemoteHostManager] = None):
         self.db = db_manager
+        self.remote_manager = remote_manager
 
     def get_bridge_list_from_db(self):
         """Get list of bridges that should exist based on bridge nodes in database."""
@@ -28,10 +33,46 @@ class BridgeManager:
 
         return sorted(bridges)
 
+    def _execute_command(self, command, capture_output=True, text=True, check=True):
+        """Execute command locally or remotely based on configuration."""
+        if self.remote_manager and self.remote_manager.is_connected():
+            # Remote execution
+            command_str = " ".join(command) if isinstance(command, list) else command
+            try:
+                exit_code, stdout, stderr = self.remote_manager.execute_command(
+                    command_str, check=False
+                )
+                if check and exit_code != 0:
+                    # Create a mock CalledProcessError for consistency
+                    error = subprocess.CalledProcessError(exit_code, command_str)
+                    error.stderr = stderr
+                    raise error
+
+                # Create a mock result object for consistency
+                class MockResult:
+                    def __init__(self, returncode, stdout, stderr):
+                        self.returncode = returncode
+                        self.stdout = stdout
+                        self.stderr = stderr
+
+                return MockResult(exit_code, stdout, stderr)
+            except Exception as e:
+                if hasattr(e, "stderr"):
+                    raise e
+                # Convert to CalledProcessError for consistency
+                error = subprocess.CalledProcessError(1, command_str)
+                error.stderr = str(e)
+                raise error
+        else:
+            # Local execution
+            return subprocess.run(
+                command, capture_output=capture_output, text=text, check=check
+            )
+
     def check_bridge_exists(self, bridge_name):
-        """Check if a Linux bridge exists on the system."""
+        """Check if a Linux bridge exists on the system (local or remote)."""
         try:
-            result = subprocess.run(
+            result = self._execute_command(
                 ["ip", "link", "show", bridge_name],
                 capture_output=True,
                 text=True,
@@ -87,25 +128,37 @@ class BridgeManager:
             ["bridge", "vlan", "add", "vid", "1-4094", "dev", bridge_name, "self"],
         ]
 
+        location = (
+            "remote host"
+            if self.remote_manager and self.remote_manager.is_connected()
+            else "local system"
+        )
+
         if dry_run:
-            click.echo(f"Would create VLAN-capable bridge: {bridge_name}")
+            click.echo(f"Would create VLAN-capable bridge on {location}: {bridge_name}")
             for cmd in commands:
                 click.echo(f"  Command: {' '.join(cmd)}")
             click.echo("Bridge will support VLANs 1-4094")
-            return True, f"Dry run: would create VLAN-capable {bridge_name}"
+            return (
+                True,
+                f"Dry run: would create VLAN-capable {bridge_name} on {location}",
+            )
 
         try:
             for cmd in commands:
-                subprocess.run(cmd, capture_output=True, text=True, check=True)
+                self._execute_command(cmd, capture_output=True, text=True, check=True)
             return (
                 True,
-                f"Successfully created VLAN-capable bridge {bridge_name} "
+                f"Successfully created VLAN-capable bridge {bridge_name} on {location} "
                 f"(VLANs 1-4094)",
             )
         except subprocess.CalledProcessError as e:
-            return False, f"Failed to create bridge {bridge_name}: {e.stderr}"
+            return (
+                False,
+                f"Failed to create bridge {bridge_name} on {location}: {e.stderr}",
+            )
         except Exception as e:
-            return False, f"Error creating bridge {bridge_name}: {e}"
+            return False, f"Error creating bridge {bridge_name} on {location}: {e}"
 
     def delete_bridge(self, bridge_name, dry_run=False):
         """Delete a Linux bridge from the system."""
@@ -117,20 +170,29 @@ class BridgeManager:
             ["ip", "link", "delete", bridge_name],
         ]
 
+        location = (
+            "remote host"
+            if self.remote_manager and self.remote_manager.is_connected()
+            else "local system"
+        )
+
         if dry_run:
-            click.echo(f"Would delete bridge: {bridge_name}")
+            click.echo(f"Would delete bridge on {location}: {bridge_name}")
             for cmd in commands:
                 click.echo(f"  Command: {' '.join(cmd)}")
-            return True, f"Dry run: would delete {bridge_name}"
+            return True, f"Dry run: would delete {bridge_name} on {location}"
 
         try:
             for cmd in commands:
-                subprocess.run(cmd, capture_output=True, text=True, check=True)
-            return True, f"Successfully deleted bridge {bridge_name}"
+                self._execute_command(cmd, capture_output=True, text=True, check=True)
+            return True, f"Successfully deleted bridge {bridge_name} on {location}"
         except subprocess.CalledProcessError as e:
-            return False, f"Failed to delete bridge {bridge_name}: {e.stderr}"
+            return (
+                False,
+                f"Failed to delete bridge {bridge_name} on {location}: {e.stderr}",
+            )
         except Exception as e:
-            return False, f"Error deleting bridge {bridge_name}: {e}"
+            return False, f"Error deleting bridge {bridge_name} on {location}: {e}"
 
     def create_all_bridges(self, dry_run=False, force=False):
         """Create all missing bridges."""

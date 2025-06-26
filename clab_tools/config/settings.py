@@ -88,6 +88,50 @@ class BridgeSettings(BaseSettings):
     model_config = ConfigDict(env_prefix="CLAB_BRIDGE_")
 
 
+class RemoteHostSettings(BaseSettings):
+    """Remote containerlab host configuration settings."""
+
+    enabled: bool = Field(default=False, description="Enable remote host operations")
+    host: Optional[str] = Field(default=None, description="Remote host IP or hostname")
+    port: int = Field(default=22, description="SSH port")
+    username: Optional[str] = Field(default=None, description="SSH username")
+    password: Optional[str] = Field(default=None, description="SSH password")
+    private_key_path: Optional[str] = Field(
+        default=None, description="SSH private key file path"
+    )
+    topology_remote_dir: str = Field(
+        default="/tmp/clab-topologies",
+        description="Remote directory for topology files",
+    )
+    timeout: int = Field(default=30, description="SSH connection timeout in seconds")
+
+    model_config = ConfigDict(env_prefix="CLAB_REMOTE_")
+
+    @field_validator("host")
+    @classmethod
+    def validate_host_when_enabled(cls, v, info):
+        """Validate that host is provided when remote operations are enabled."""
+        if info.data.get("enabled", False) and not v:
+            raise ValueError(
+                "Remote host must be specified when remote operations are enabled"
+            )
+        return v
+
+    @field_validator("username")
+    @classmethod
+    def validate_username_when_enabled(cls, v, info):
+        """Validate that username is provided when remote operations are enabled."""
+        if info.data.get("enabled", False) and not v:
+            raise ValueError(
+                "Remote username must be specified when remote operations are enabled"
+            )
+        return v
+
+    def has_auth_method(self) -> bool:
+        """Check if at least one authentication method is configured."""
+        return bool(self.password or self.private_key_path)
+
+
 class Settings(BaseSettings):
     """Main application settings."""
 
@@ -96,6 +140,7 @@ class Settings(BaseSettings):
     logging: LoggingSettings = Field(default_factory=LoggingSettings)
     topology: TopologySettings = Field(default_factory=TopologySettings)
     bridges: BridgeSettings = Field(default_factory=BridgeSettings)
+    remote: RemoteHostSettings = Field(default_factory=RemoteHostSettings)
 
     # General settings
     config_file: Optional[str] = Field(
@@ -139,6 +184,7 @@ class Settings(BaseSettings):
             "logging": self.logging.model_dump(),
             "topology": self.topology.model_dump(),
             "bridges": self.bridges.model_dump(),
+            "remote": self.remote.model_dump(),
             "debug": self.debug,
             "config_file": self.config_file,
         }

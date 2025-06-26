@@ -45,27 +45,52 @@ python main.py import-csv -n nodes.csv -c connections.csv --clear-existing
 python main.py show-data
 ```
 
-### 4. Create Bridges (Optional)
+### 4. Choose Deployment Target
 
+You can deploy containerlab either locally or on a remote host:
+
+#### Local Deployment
 ```bash
-# Create VLAN-capable bridges on the host system
+# Create VLAN-capable bridges on the local system
 python main.py create-bridges --dry-run  # Preview first
 python main.py create-bridges            # Create the bridges
 ```
 
-This creates Linux bridges with full VLAN support (VLANs 1-4094) for any bridge nodes defined in your topology.
+#### Remote Deployment
+```bash
+# Configure remote host (one-time setup)
+python main.py --remote-host 192.168.1.100 --remote-user clab-user --enable-remote remote test-connection
+
+# Create bridges on remote host
+python main.py --enable-remote create-bridges
+
+# Or configure in config.yaml:
+# remote:
+#   enabled: true
+#   host: "192.168.1.100"
+#   username: "clab-user"
+#   password: "your-password"  # or use private_key_path
+```
 
 ### 5. Generate Topology
 
+#### Local Topology Generation
 ```bash
 # Generate containerlab topology file
 python main.py generate-topology -o my_lab.yml -t "production_lab" --validate
 ```
 
+#### Remote Topology Generation with Upload
+```bash
+# Generate and automatically upload to remote host
+python main.py generate-topology --upload --enable-remote -o my_lab.yml -t "production_lab" --validate
+```
+
 ### 6. Deploy with Containerlab
 
+#### Local Deployment
 ```bash
-# Deploy the lab
+# Deploy the lab locally
 sudo clab deploy -t my_lab.yml
 
 # When finished, destroy the lab
@@ -73,6 +98,21 @@ sudo clab destroy -t my_lab.yml
 
 # Clean up bridges
 sudo python main.py cleanup-bridges
+```
+
+#### Remote Deployment
+```bash
+# Deploy on remote host
+python main.py remote execute "sudo clab deploy -t /tmp/clab-topologies/my_lab.yml"
+
+# Check deployment status
+python main.py remote execute "clab inspect"
+
+# When finished, destroy the lab
+python main.py remote execute "sudo clab destroy -t /tmp/clab-topologies/my_lab.yml"
+
+# Clean up bridges on remote host
+python main.py --enable-remote cleanup-bridges
 ```
 
 ## CLI Commands Reference
@@ -86,6 +126,14 @@ All commands support these global options:
 - `--log-level`: Set log level (DEBUG, INFO, WARNING, ERROR, CRITICAL)
 - `--log-format`: Set log format (console, json)
 - `--db-url`: Override database URL
+
+**Remote Host Options (available on all commands):**
+- `--remote-host`: Remote containerlab host IP/hostname
+- `--remote-user`: Remote host SSH username
+- `--remote-password`: Remote host SSH password
+- `--remote-port`: Remote host SSH port (default: 22)
+- `--remote-key`: Path to SSH private key file
+- `--enable-remote`: Enable remote host operations
 
 ### Import CSV Data
 
@@ -125,6 +173,7 @@ python main.py generate-topology [OPTIONS]
 - `--template`: Jinja2 template file (default: from config)
 - `--kinds-config`: Supported kinds configuration file
 - `--validate`: Validate generated YAML file
+- `--upload`: Upload topology file to remote host (requires remote configuration)
 
 **Examples:**
 ```bash
@@ -136,6 +185,12 @@ python main.py generate-topology -o production.yml -t "prod_lab" --validate
 
 # Override management settings
 python main.py generate-topology -o lab.yml -m "mgmt_net" -s "192.168.100.0/24"
+
+# Generate and upload to remote host
+python main.py generate-topology --upload --enable-remote -o lab.yml
+
+# Generate with remote host specified via CLI
+python main.py --remote-host 192.168.1.100 --remote-user clab --enable-remote generate-topology --upload -o lab.yml
 ```
 
 ### Bridge Management
@@ -143,6 +198,7 @@ python main.py generate-topology -o lab.yml -m "mgmt_net" -s "192.168.100.0/24"
 ```bash
 python main.py create-bridges [OPTIONS]
 python main.py cleanup-bridges [OPTIONS]
+python main.py list-bridges
 ```
 
 **Options:**
@@ -151,14 +207,53 @@ python main.py cleanup-bridges [OPTIONS]
 
 **Examples:**
 ```bash
-# Preview bridge creation
+# Preview bridge creation locally
 python main.py create-bridges --dry-run
 
-# Create bridges
+# Create bridges locally
 sudo python main.py create-bridges
 
-# Force cleanup without prompts
-sudo python main.py cleanup-bridges --force
+# Create bridges on remote host
+python main.py --enable-remote create-bridges
+
+# List bridge status locally
+python main.py list-bridges
+
+# List bridge status on remote host
+python main.py --enable-remote list-bridges
+
+# Force cleanup without prompts on remote host
+python main.py --enable-remote cleanup-bridges --force
+```
+
+### Remote Host Management
+
+```bash
+python main.py remote [SUBCOMMAND] [OPTIONS]
+```
+
+**Subcommands:**
+- `test-connection`: Test SSH connection to remote host
+- `show-config`: Display current remote host configuration
+- `upload-topology LOCAL_FILE REMOTE_PATH`: Upload topology file to remote host
+- `execute COMMAND`: Execute command on remote host
+
+**Examples:**
+```bash
+# Test remote connection
+python main.py remote test-connection --host 192.168.1.100 --username clab-user
+
+# Show current remote configuration
+python main.py remote show-config
+
+# Upload topology file
+python main.py remote upload-topology lab.yml /tmp/clab-topologies/lab.yml
+
+# Execute command on remote host
+python main.py remote execute "clab inspect"
+
+# Deploy containerlab on remote host
+python main.py remote execute "sudo clab deploy -t /tmp/clab-topologies/lab.yml"
 ```
 
 ### Data Management
@@ -217,6 +312,17 @@ bridges:
   bridge_prefix: "clab-br"
   cleanup_on_exit: false
 
+# Remote host settings
+remote:
+  enabled: false                 # Enable/disable remote operations
+  host: "192.168.1.100"         # Remote containerlab host IP/hostname
+  port: 22                      # SSH port
+  username: "clab-user"         # SSH username
+  password: "secure-password"   # SSH password (or use private_key_path)
+  private_key_path: "~/.ssh/id_rsa"  # SSH private key (recommended over password)
+  topology_remote_dir: "/tmp/clab-topologies"  # Remote directory for topology files
+  timeout: 30                   # SSH connection timeout in seconds
+
 # General settings
 debug: false
 ```
@@ -225,12 +331,25 @@ debug: false
 
 Override any setting with environment variables:
 
+**General Settings:**
 ```bash
 export CLAB_DB_URL="postgresql://user:pass@host/db"
 export CLAB_LOG_LEVEL="DEBUG"
 export CLAB_LOG_FORMAT="json"
 export CLAB_DEBUG="true"
 export CLAB_TOPOLOGY_DEFAULT_PREFIX="mylab"
+```
+
+**Remote Host Settings:**
+```bash
+export CLAB_REMOTE_ENABLED="true"
+export CLAB_REMOTE_HOST="192.168.1.100"
+export CLAB_REMOTE_USERNAME="clab-user"
+export CLAB_REMOTE_PASSWORD="secure-password"
+export CLAB_REMOTE_PORT="22"
+export CLAB_REMOTE_PRIVATE_KEY_PATH="~/.ssh/id_rsa"
+export CLAB_REMOTE_TOPOLOGY_REMOTE_DIR="/tmp/clab-topologies"
+export CLAB_REMOTE_TIMEOUT="30"
 ```
 
 ## CSV File Formats
@@ -360,6 +479,207 @@ echo "Lab deployed successfully!"
     python main.py --log-format json generate-topology -o test_lab.yml --validate
 ```
 
+## Remote Host Workflows
+
+### Complete Remote Deployment Workflow
+
+This example shows a complete workflow for deploying containerlab on a remote host:
+
+```bash
+#!/bin/bash
+set -e
+
+# Step 1: Configure remote host
+export CLAB_REMOTE_ENABLED="true"
+export CLAB_REMOTE_HOST="192.168.1.100"
+export CLAB_REMOTE_USERNAME="clab-user"
+export CLAB_REMOTE_PRIVATE_KEY_PATH="~/.ssh/id_rsa"
+
+# Step 2: Test remote connection
+echo "Testing remote connection..."
+python main.py remote test-connection
+
+# Step 3: Import data locally
+echo "Importing CSV data..."
+python main.py import-csv -n nodes.csv -c connections.csv --clear-existing
+
+# Step 4: Generate and upload topology
+echo "Generating and uploading topology..."
+python main.py generate-topology --upload --validate -o my_lab.yml
+
+# Step 5: Create bridges on remote host
+echo "Creating bridges on remote host..."
+python main.py create-bridges --enable-remote
+
+# Step 6: Deploy on remote host
+echo "Deploying lab on remote host..."
+python main.py remote execute "sudo clab deploy -t /tmp/clab-topologies/my_lab.yml"
+
+echo "Remote lab deployment complete!"
+echo "Check status with: python main.py remote execute 'clab inspect'"
+```
+
+### Remote Host Configuration Methods
+
+#### Method 1: Configuration File (Recommended)
+```yaml
+# config.yaml
+remote:
+  enabled: true
+  host: "192.168.1.100"
+  username: "clab-user"
+  private_key_path: "~/.ssh/id_rsa"  # Recommended over password
+  topology_remote_dir: "/tmp/clab-topologies"
+  timeout: 30
+```
+
+#### Method 2: Environment Variables
+```bash
+export CLAB_REMOTE_ENABLED="true"
+export CLAB_REMOTE_HOST="192.168.1.100"
+export CLAB_REMOTE_USERNAME="clab-user"
+export CLAB_REMOTE_PRIVATE_KEY_PATH="~/.ssh/id_rsa"
+```
+
+#### Method 3: CLI Arguments
+```bash
+python main.py --remote-host 192.168.1.100 --remote-user clab-user --remote-key ~/.ssh/id_rsa --enable-remote [command]
+```
+
+### Remote Host Management Tasks
+
+#### Initial Setup and Testing
+```bash
+# Test SSH connectivity
+python main.py --remote-host 192.168.1.100 --remote-user clab --enable-remote remote test-connection
+
+# Show current configuration
+python main.py remote show-config
+
+# Test with password authentication
+python main.py remote test-connection --host 192.168.1.100 --username clab --password
+```
+
+#### File Management
+```bash
+# Upload topology file manually
+python main.py remote upload-topology local_lab.yml /tmp/clab-topologies/lab.yml
+
+# Generate and auto-upload
+python main.py generate-topology --upload --enable-remote
+
+# Check remote directory contents
+python main.py remote execute "ls -la /tmp/clab-topologies/"
+```
+
+#### Bridge Management
+```bash
+# Check bridge status on remote host
+python main.py --enable-remote list-bridges
+
+# Create bridges with preview
+python main.py --enable-remote create-bridges --dry-run
+python main.py --enable-remote create-bridges
+
+# Clean up bridges
+python main.py --enable-remote cleanup-bridges
+```
+
+#### Containerlab Operations
+```bash
+# Deploy lab
+python main.py remote execute "sudo clab deploy -t /tmp/clab-topologies/lab.yml"
+
+# Check lab status
+python main.py remote execute "clab inspect"
+
+# Show lab topology
+python main.py remote execute "clab graph -t /tmp/clab-topologies/lab.yml"
+
+# Destroy lab
+python main.py remote execute "sudo clab destroy -t /tmp/clab-topologies/lab.yml"
+```
+
+### Security Considerations for Remote Hosts
+
+1. **Use SSH Key Authentication** (Recommended)
+   ```bash
+   # Generate SSH key pair
+   ssh-keygen -t rsa -b 4096 -f ~/.ssh/clab_rsa
+
+   # Copy public key to remote host
+   ssh-copy-id -i ~/.ssh/clab_rsa.pub clab-user@192.168.1.100
+
+   # Configure in clab-tools
+   export CLAB_REMOTE_PRIVATE_KEY_PATH="~/.ssh/clab_rsa"
+   ```
+
+2. **Secure Password Handling**
+   ```bash
+   # Use environment variable (not in config file)
+   export CLAB_REMOTE_PASSWORD="secure-password"
+
+   # Or prompt for password interactively
+   python main.py remote test-connection --host 192.168.1.100 --username clab
+   ```
+
+3. **Network Security**
+   - Ensure SSH port (22) is accessible
+   - Use VPN or secure networks for remote access
+   - Consider SSH port forwarding for additional security
+
+### Remote Host Requirements
+
+Your remote containerlab host should have:
+
+1. **SSH server** running and accessible
+2. **Containerlab** installed and working
+3. **Bridge utilities** (`bridge-utils` package)
+4. **iproute2** package for `ip` commands
+5. **Sudo privileges** for the remote user (for bridge and containerlab operations)
+6. **Python 3.7+** (if needed for any Python-based tools)
+
+### Troubleshooting Remote Connections
+
+#### Connection Issues
+```bash
+# Test basic SSH connectivity
+ssh clab-user@192.168.1.100
+
+# Test with specific port
+ssh -p 2222 clab-user@192.168.1.100
+
+# Check SSH key permissions
+chmod 600 ~/.ssh/id_rsa
+
+# Debug SSH connection
+python main.py --debug remote test-connection
+```
+
+#### Permission Issues
+```bash
+# Test sudo access on remote host
+python main.py remote execute "sudo whoami"
+
+# Check if user can manage bridges
+python main.py remote execute "sudo ip link show"
+
+# Verify containerlab installation
+python main.py remote execute "clab version"
+```
+
+#### File Transfer Issues
+```bash
+# Test SFTP access
+sftp clab-user@192.168.1.100
+
+# Check remote directory permissions
+python main.py remote execute "ls -la /tmp/"
+
+# Create remote directory manually
+python main.py remote execute "mkdir -p /tmp/clab-topologies"
+```
+
 ## Best Practices
 
 ### 1. Data Management
@@ -377,7 +697,15 @@ echo "Lab deployed successfully!"
 - Clean up bridges when labs are destroyed
 - Monitor bridge creation in production environments
 
-### 4. Error Handling
+### 4. Remote Host Management
+- Use SSH key authentication instead of passwords
+- Test remote connectivity before running complex operations
+- Use `--dry-run` for bridge operations on remote hosts
+- Keep remote topology directory organized
+- Monitor disk space on remote hosts
+- Use timeouts appropriate for your network latency
+
+### 5. Error Handling
 - Enable debug logging when troubleshooting
 - Check log files for detailed error information
 - Validate input data before processing
@@ -401,6 +729,19 @@ python main.py --config production.yaml generate-topology -o production_lab.yml 
 sudo python main.py --config production.yaml create-bridges
 ```
 
+### Remote Deployment Environment
+```bash
+export CLAB_REMOTE_ENABLED="true"
+export CLAB_REMOTE_HOST="192.168.1.100"
+export CLAB_REMOTE_USERNAME="clab-user"
+export CLAB_REMOTE_PRIVATE_KEY_PATH="~/.ssh/id_rsa"
+
+python main.py import-csv -n nodes.csv -c connections.csv --clear-existing
+python main.py generate-topology --upload --validate -o lab.yml
+python main.py create-bridges --enable-remote
+python main.py remote execute "sudo clab deploy -t /tmp/clab-topologies/lab.yml"
+```
+
 ### Testing Environment
 ```bash
 export CLAB_DB_URL="sqlite:///:memory:"
@@ -409,6 +750,7 @@ python main.py generate-topology -o test_lab.yml --validate
 ```
 
 For more advanced usage and troubleshooting, see:
+- [Remote Host Management Guide](remote-host-management.md)
 - [Configuration Guide](configuration.md)
 - [Troubleshooting Guide](troubleshooting.md)
 - [Developer Guide](developer-guide.md)
