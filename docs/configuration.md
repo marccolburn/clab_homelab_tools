@@ -130,10 +130,10 @@ clab-tools validates configuration on startup:
 
 ```bash
 # Validate current configuration
-./clab-tools.sh config validate
+./clab-tools.sh --help
 
 # Show effective configuration (with overrides)
-./clab-tools.sh config show
+./clab-tools.sh remote show-config
 
 # Test remote host connectivity
 ./clab-tools.sh remote test-connection lab-server-1
@@ -180,10 +180,10 @@ bridges:
 
 ```bash
 # Check configuration syntax
-./clab-tools.sh config validate
+./clab-tools.sh --help
 
 # Show resolved configuration
-./clab-tools.sh config show --verbose
+./clab-tools.sh remote show-config --verbose
 
 # Reset to defaults
 cp config.local.example.yaml config.local.yaml
@@ -196,7 +196,7 @@ cp config.local.example.yaml config.local.yaml
 ./clab-tools.sh remote test-connection hostname
 
 # Check remote containerlab status
-./clab-tools.sh remote status hostname
+./clab-tools.sh remote test-connection
 ```
 
 For more configuration troubleshooting, see the [Troubleshooting Guide](troubleshooting.md).

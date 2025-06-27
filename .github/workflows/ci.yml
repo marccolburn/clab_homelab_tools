@@ -78,9 +78,9 @@ jobs:
 
     - name: Test basic workflow
       run: |
-        python clab_tools/main.py import-csv -n example_nodes.csv -c example_connections.csv
-        python clab_tools/main.py show-data
-        python clab_tools/main.py generate-topology -o test_topology.yml --validate
+        python clab_tools/main.py data import -n example_nodes.csv -c example_connections.csv
+        python clab_tools/main.py data show
+        python clab_tools/main.py topology generate -o test_topology.yml --validate
 
         # Verify output file was created
         test -f test_topology.yml

@@ -26,7 +26,10 @@ class DatabaseManager(LoggerMixin):
     """
 
     def __init__(
-        self, settings: Optional[DatabaseSettings] = None, db_url: Optional[str] = None
+        self,
+        settings: Optional[DatabaseSettings] = None,
+        db_url: Optional[str] = None,
+        default_lab: str = "default",
     ):
         """
         Initialize database manager.
@@ -34,6 +37,7 @@ class DatabaseManager(LoggerMixin):
         Args:
             settings: Database settings object
             db_url: Direct database URL (overrides settings)
+            default_lab: Default lab name for operations
         """
         if db_url:
             self.db_url = db_url
@@ -44,6 +48,7 @@ class DatabaseManager(LoggerMixin):
             self.db_url = "sqlite:///clab_topology.db"
 
         self.settings = settings
+        self.current_lab = default_lab
         self.engine = create_engine(
             self.db_url,
             echo=settings.echo if settings else False,
@@ -55,6 +60,23 @@ class DatabaseManager(LoggerMixin):
 
         # Initialize database
         self.init_database()
+
+    def set_lab(self, lab_name: str) -> None:
+        """Set the current lab for operations.
+
+        Args:
+            lab_name: Name of the lab to set as current
+        """
+        self.current_lab = lab_name
+        self.logger.info("Set current lab", lab=lab_name)
+
+    def get_current_lab(self) -> str:
+        """Get the current lab name.
+
+        Returns:
+            Current lab name
+        """
+        return self.current_lab
 
     @log_function_call
     def init_database(self):
@@ -174,8 +196,9 @@ class DatabaseManager(LoggerMixin):
 
     @handle_database_errors
     @log_function_call
-    def clear_nodes(self, lab_name: str) -> bool:
+    def clear_nodes(self, lab_name: Optional[str] = None) -> bool:
         """Clear all nodes from the specified lab."""
+        lab_name = lab_name or self.current_lab
         with self.get_session() as session:
             lab = self.get_or_create_lab(lab_name)
             deleted_count = session.query(Node).filter_by(lab_id=lab.id).delete()
@@ -186,8 +209,9 @@ class DatabaseManager(LoggerMixin):
 
     @handle_database_errors
     @log_function_call
-    def clear_connections(self, lab_name: str) -> bool:
+    def clear_connections(self, lab_name: Optional[str] = None) -> bool:
         """Clear all connections from the specified lab."""
+        lab_name = lab_name or self.current_lab
         with self.get_session() as session:
             lab = self.get_or_create_lab(lab_name)
             deleted_count = session.query(Connection).filter_by(lab_id=lab.id).delete()
@@ -198,8 +222,11 @@ class DatabaseManager(LoggerMixin):
 
     @handle_database_errors
     @log_function_call
-    def insert_node(self, name: str, kind: str, mgmt_ip: str, lab_name: str) -> bool:
+    def insert_node(
+        self, name: str, kind: str, mgmt_ip: str, lab_name: Optional[str] = None
+    ) -> bool:
         """Insert or update a node in the specified lab."""
+        lab_name = lab_name or self.current_lab
         with self.get_session() as session:
             lab = self.get_or_create_lab(lab_name)
 
@@ -241,9 +268,10 @@ class DatabaseManager(LoggerMixin):
         conn_type: str,
         node1_interface: str,
         node2_interface: str,
-        lab_name: str,
+        lab_name: Optional[str] = None,
     ) -> bool:
         """Insert a connection into the specified lab."""
+        lab_name = lab_name or self.current_lab
         with self.get_session() as session:
             lab = self.get_or_create_lab(lab_name)
 
@@ -289,8 +317,11 @@ class DatabaseManager(LoggerMixin):
 
     @handle_database_errors
     @log_function_call
-    def get_all_nodes(self, lab_name: str) -> List[Tuple[str, str, str]]:
+    def get_all_nodes(
+        self, lab_name: Optional[str] = None
+    ) -> List[Tuple[str, str, str]]:
         """Retrieve all nodes from the specified lab."""
+        lab_name = lab_name or self.current_lab
         with self.get_session() as session:
             lab = self.get_or_create_lab(lab_name)
             nodes = (
@@ -307,9 +338,10 @@ class DatabaseManager(LoggerMixin):
     @handle_database_errors
     @log_function_call
     def get_all_connections(
-        self, lab_name: str
+        self, lab_name: Optional[str] = None
     ) -> List[Tuple[str, str, str, str, str]]:
         """Retrieve all connections from the specified lab."""
+        lab_name = lab_name or self.current_lab
         with self.get_session() as session:
             lab = self.get_or_create_lab(lab_name)
             connections = (
@@ -332,9 +364,15 @@ class DatabaseManager(LoggerMixin):
     @handle_database_errors
     @log_function_call
     def save_topology_config(
-        self, name: str, prefix: str, mgmt_network: str, mgmt_subnet: str, lab_name: str
+        self,
+        name: str,
+        prefix: str,
+        mgmt_network: str,
+        mgmt_subnet: str,
+        lab_name: Optional[str] = None,
     ) -> bool:
         """Save topology configuration to specified lab."""
+        lab_name = lab_name or self.current_lab
         with self.get_session() as session:
             lab = self.get_or_create_lab(lab_name)
 
@@ -368,9 +406,10 @@ class DatabaseManager(LoggerMixin):
     @handle_database_errors
     @log_function_call
     def get_topology_config(
-        self, name: str, lab_name: str
+        self, name: str, lab_name: Optional[str] = None
     ) -> Optional[Tuple[str, str, str]]:
         """Retrieve topology configuration from specified lab."""
+        lab_name = lab_name or self.current_lab
         with self.get_session() as session:
             lab = self.get_or_create_lab(lab_name)
             config = (
@@ -392,8 +431,11 @@ class DatabaseManager(LoggerMixin):
 
     @handle_database_errors
     @log_function_call
-    def get_node_by_name(self, name: str, lab_name: str) -> Optional[Node]:
+    def get_node_by_name(
+        self, name: str, lab_name: Optional[str] = None
+    ) -> Optional[Node]:
         """Get a node by name from specified lab."""
+        lab_name = lab_name or self.current_lab
         with self.get_session() as session:
             lab = self.get_or_create_lab(lab_name)
             node = session.query(Node).filter_by(name=name, lab_id=lab.id).first()
@@ -405,8 +447,9 @@ class DatabaseManager(LoggerMixin):
 
     @handle_database_errors
     @log_function_call
-    def delete_node(self, name: str, lab_name: str) -> bool:
+    def delete_node(self, name: str, lab_name: Optional[str] = None) -> bool:
         """Delete a node and its connections from specified lab."""
+        lab_name = lab_name or self.current_lab
         with self.get_session() as session:
             lab = self.get_or_create_lab(lab_name)
             node = session.query(Node).filter_by(name=name, lab_id=lab.id).first()
@@ -422,8 +465,11 @@ class DatabaseManager(LoggerMixin):
 
     @handle_database_errors
     @log_function_call
-    def get_nodes_by_kind(self, kind: str, lab_name: str) -> List[Node]:
+    def get_nodes_by_kind(
+        self, kind: str, lab_name: Optional[str] = None
+    ) -> List[Node]:
         """Get all nodes of a specific kind from specified lab."""
+        lab_name = lab_name or self.current_lab
         with self.get_session() as session:
             lab = self.get_or_create_lab(lab_name)
             nodes = (
@@ -443,9 +489,11 @@ class DatabaseManager(LoggerMixin):
 
     @handle_database_errors
     @log_function_call
-    def get_stats(self, lab_name: str = None) -> Dict[str, int]:
+    def get_stats(self, lab_name: Optional[str] = None) -> Dict[str, int]:
         """Get database statistics, optionally for a specific lab."""
         with self.get_session() as session:
+            if lab_name is None:
+                lab_name = self.current_lab
             if lab_name:
                 # Get stats for specific lab
                 lab = self.get_or_create_lab(lab_name)

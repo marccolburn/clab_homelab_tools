@@ -22,10 +22,10 @@ clab-tools provides a workflow for managing complex containerlab topologies thro
 ./clab-tools.sh lab switch my-lab
 
 # Import topology data
-./clab-tools.sh import-csv nodes.csv connections.csv
+clab-tools data import nodes.csv connections.csv
 
 # Verify data
-./clab-tools.sh show-data
+clab-tools data show
 ```
 
 ### 2. Configure Bridges
@@ -66,7 +66,7 @@ containerlab deploy -t clab-topology.yaml
 
 # Switch between labs
 ./clab-tools.sh lab switch datacenter-sim
-./clab-tools.sh show-data
+clab-tools data show
 
 # Clone existing lab
 ./clab-tools.sh lab clone datacenter-sim datacenter-v2
@@ -102,41 +102,56 @@ spine1,eth2,leaf2,eth1,br-fabric
 
 ```bash
 # Import data
-./clab-tools.sh import-csv nodes.csv connections.csv
+clab-tools data import nodes.csv connections.csv
 
-# Export current data
-./clab-tools.sh export-csv --output exported-
+# Import data with proper flags
+clab-tools data import -n nodes.csv -c connections.csv
 
-# Validate before import
-./clab-tools.sh import-csv --validate nodes.csv
+# Check imported data
+clab-tools data show
 ```
 
 ## Bridge Management
 
 ### Creating Bridges
 
+#### Topology-Based Bridge Creation
+
 ```bash
-# Basic bridge
-sudo ./clab-tools.sh bridge create br-mgmt
+# Create all bridges required by topology
+sudo clab-tools bridge create
 
-# Bridge with physical interfaces
-sudo ./clab-tools.sh bridge create br-wan --interfaces eth1,eth2
+# Preview what bridges would be created
+sudo clab-tools bridge create --dry-run
+```
 
-# OVS bridge
-sudo ./clab-tools.sh bridge create br-overlay --type ovs
+#### Manual Bridge Creation
+
+```bash
+# Basic management bridge with physical interface
+sudo clab-tools bridge create-bridge br-mgmt --interface eth0
+
+# Access bridge without VLAN filtering
+sudo clab-tools bridge create-bridge br-access --no-vlan-filtering
+
+# Trunk bridge with multiple interfaces and STP
+sudo clab-tools bridge create-bridge br-trunk -i eth1 -i eth2 --stp
+
+# Bridge with custom VLAN range
+sudo clab-tools bridge create-bridge br-custom --vid-range 100-200
 ```
 
 ### Bridge Configuration
 
 ```bash
-# Disable spanning tree
-sudo ./clab-tools.sh bridge configure br-mgmt --stp off
+# Configure VLANs on all topology bridges
+sudo clab-tools bridge configure
 
-# Set VLAN filtering
-sudo ./clab-tools.sh bridge configure br-fabric --vlan-filtering on
+# Configure VLANs on specific bridge
+sudo clab-tools bridge configure --bridge br-mgmt
 
-# Add interface to bridge
-sudo ./clab-tools.sh bridge add-interface br-mgmt eth0
+# Preview VLAN configuration
+sudo clab-tools bridge configure --dry-run
 ```
 
 ## Remote Deployment
@@ -188,13 +203,14 @@ remote_hosts:
 
 ```bash
 # Clear all data
-./clab-tools.sh clear-data
+clab-tools data clear
 
-# Update nodes from CSV
-./clab-tools.sh update-nodes nodes-updated.csv
+# Re-import updated data
+./clab-tools.sh data clear
+./clab-tools.sh data import -n nodes-updated.csv -c connections.csv
 
-# Batch bridge creation
-sudo ./clab-tools.sh bridge create-batch bridges.yaml
+# Manual bridge creation with custom options
+sudo ./clab-tools.sh bridge create-bridge br-custom --interface eth0
 ```
 
 ### Scripting and Automation
@@ -205,7 +221,7 @@ sudo ./clab-tools.sh bridge create-batch bridges.yaml
 set -e
 
 ./clab-tools.sh lab create prod-network
-./clab-tools.sh import-csv prod-nodes.csv prod-connections.csv
+clab-tools data import prod-nodes.csv prod-connections.csv
 sudo ./clab-tools.sh bridge create br-mgmt --interfaces eth0
 ./clab-tools.sh topology generate
 ./clab-tools.sh remote deploy prod-server
@@ -250,7 +266,7 @@ export CLAB_CONFIG_FILE="./test-config.yaml"
 **Import Errors:**
 ```bash
 # Validate CSV format
-./clab-tools.sh import-csv --validate nodes.csv
+clab-tools data import --validate nodes.csv
 
 # Check CSV headers
 head -1 nodes.csv

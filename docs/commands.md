@@ -70,12 +70,16 @@ Deletes lab and all its data permanently.
 
 ## Data Management
 
-### `import-csv`
+### `clab-tools data`
+
+Manage lab data including importing, viewing, and clearing.
+
+#### `data import`
 
 Import node and connection data from CSV files.
 
 ```bash
-clab-tools import-csv -n nodes.csv -c connections.csv [OPTIONS]
+clab-tools data import -n nodes.csv -c connections.csv [OPTIONS]
 ```
 
 **Options:**
@@ -86,31 +90,31 @@ clab-tools import-csv -n nodes.csv -c connections.csv [OPTIONS]
 **Examples:**
 ```bash
 # Basic import
-clab-tools import-csv -n nodes.csv -c connections.csv
+clab-tools data import -n nodes.csv -c connections.csv
 
 # Replace existing data
-clab-tools import-csv -n nodes.csv -c connections.csv --clear-existing
+clab-tools data import -n nodes.csv -c connections.csv --clear-existing
 
 # Import to specific lab
-clab-tools --lab production import-csv -n prod-nodes.csv -c prod-connections.csv
+clab-tools --lab production data import -n prod-nodes.csv -c prod-connections.csv
 ```
 
-### `show-data`
+#### `data show`
 
 Display current lab data.
 
 ```bash
-clab-tools show-data
+clab-tools data show
 ```
 
 Shows nodes, connections, and statistics for current lab.
 
-### `clear-data`
+#### `data clear`
 
 Clear all data from current lab.
 
 ```bash
-clab-tools clear-data --force
+clab-tools data clear --force
 ```
 
 **Options:**
@@ -118,12 +122,16 @@ clab-tools clear-data --force
 
 ## Topology Generation
 
-### `generate-topology`
+### `clab-tools topology`
+
+Generate and validate containerlab topology files.
+
+#### `topology generate`
 
 Generate containerlab topology file from database.
 
 ```bash
-clab-tools generate-topology -o lab.yml [OPTIONS]
+clab-tools topology generate -o lab.yml [OPTIONS]
 ```
 
 **Options:**
@@ -136,26 +144,30 @@ clab-tools generate-topology -o lab.yml [OPTIONS]
 **Examples:**
 ```bash
 # Basic generation
-clab-tools generate-topology -o my-lab.yml
+clab-tools topology generate -o my-lab.yml
 
 # Custom name and prefix
-clab-tools generate-topology -o lab.yml -t "production" -p "prod"
+clab-tools topology generate -o lab.yml -t "production" -p "prod"
 
 # Validate containerlab kinds
-clab-tools generate-topology -o lab.yml --validate
+clab-tools topology generate -o lab.yml --validate
 
 # Generate and upload to remote
-clab-tools generate-topology --upload --enable-remote -o lab.yml
+clab-tools topology generate --upload --enable-remote -o lab.yml
 ```
 
 ## Bridge Management
 
-### `create-bridges`
+### `clab-tools bridge`
 
-Create Linux bridges based on connection data.
+Manage Linux bridges for network connectivity.
+
+#### `bridge create`
+
+Create Linux bridges based on connection data from topology.
 
 ```bash
-sudo clab-tools create-bridges [OPTIONS]
+sudo clab-tools bridge create [OPTIONS]
 ```
 
 **Options:**
@@ -165,31 +177,64 @@ sudo clab-tools create-bridges [OPTIONS]
 **Examples:**
 ```bash
 # Preview bridge creation
-sudo clab-tools create-bridges --dry-run
+sudo clab-tools bridge create --dry-run
 
 # Create bridges locally
-sudo clab-tools create-bridges
+sudo clab-tools bridge create
 
 # Create bridges on remote host
-clab-tools --enable-remote create-bridges --force
+clab-tools --enable-remote bridge create --force
 ```
 
-### `list-bridges`
+#### `bridge create-bridge`
+
+Create a single Linux bridge with custom options for manual bridge management.
+
+```bash
+sudo clab-tools bridge create-bridge BRIDGE_NAME [OPTIONS]
+```
+
+**Options:**
+- `-i, --interface TEXT` - Physical interface to add to bridge (can be used multiple times)
+- `--no-vlan-filtering` - Disable VLAN filtering on bridge
+- `--stp` - Enable spanning tree protocol
+- `--vid-range TEXT` - VLAN ID range to configure (default: 1-4094)
+- `--dry-run` - Show what would be done without making changes
+
+**Examples:**
+```bash
+# Create bridge with physical interface
+sudo clab-tools bridge create-bridge br-mgmt --interface eth0
+
+# Create access bridge without VLAN filtering
+sudo clab-tools bridge create-bridge br-access --no-vlan-filtering --stp
+
+# Create bridge with custom VLAN range
+sudo clab-tools bridge create-bridge br-custom --vid-range 100-200
+
+# Create bridge with multiple interfaces
+sudo clab-tools bridge create-bridge br-trunk -i eth1 -i eth2
+
+# Preview bridge creation
+sudo clab-tools bridge create-bridge br-test --dry-run
+```
+
+#### `bridge list`
 
 List bridge status and requirements.
 
 ```bash
-clab-tools list-bridges
+clab-tools bridge list
 ```
 
 Shows required bridges from topology and their current status.
 
-### `configure-vlans`
+#### `bridge configure`
 
 Configure VLAN forwarding on bridge interfaces.
 
 ```bash
-sudo clab-tools configure-vlans [OPTIONS]
+sudo clab-tools bridge configure [OPTIONS]
 ```
 
 **Options:**
@@ -199,21 +244,21 @@ sudo clab-tools configure-vlans [OPTIONS]
 **Examples:**
 ```bash
 # Configure VLANs on all bridges
-sudo clab-tools configure-vlans
+sudo clab-tools bridge configure
 
 # Configure specific bridge
-sudo clab-tools configure-vlans --bridge br-access
+sudo clab-tools bridge configure --bridge br-access
 
 # Preview VLAN configuration
-sudo clab-tools configure-vlans --dry-run
+sudo clab-tools bridge configure --dry-run
 ```
 
-### `delete-bridges`
+#### `bridge cleanup`
 
 Delete Linux bridges from the system.
 
 ```bash
-sudo clab-tools delete-bridges [OPTIONS]
+sudo clab-tools bridge cleanup [OPTIONS]
 ```
 
 **Options:**
@@ -223,13 +268,13 @@ sudo clab-tools delete-bridges [OPTIONS]
 **Examples:**
 ```bash
 # Preview bridge deletion
-sudo clab-tools delete-bridges --dry-run
+sudo clab-tools bridge cleanup --dry-run
 
 # Delete bridges with confirmation
-sudo clab-tools delete-bridges
+sudo clab-tools bridge cleanup
 
 # Force delete without prompts
-sudo clab-tools delete-bridges --force
+sudo clab-tools bridge cleanup --force
 ```
 
 ## Remote Operations
@@ -290,18 +335,18 @@ clab-tools --enable-remote remote upload-topology my-lab.yml
 
 ```bash
 # Work with specific lab without switching
-clab-tools --lab production show-data
-clab-tools --lab staging import-csv -n staging.csv -c connections.csv
+clab-tools --lab production data show
+clab-tools --lab staging data import -n staging.csv -c connections.csv
 
 # Multiple overrides
-clab-tools --config custom.yaml --lab special-env --debug generate-topology -o lab.yml
+clab-tools --config custom.yaml --lab special-env --debug topology generate -o lab.yml
 ```
 
 ### Remote Host Operations
 
 ```bash
 # Using CLI flags for remote operations
-clab-tools --remote-host 10.1.1.100 --remote-user admin --enable-remote create-bridges
+clab-tools --remote-host 10.1.1.100 --remote-user admin --enable-remote bridge create
 
 # Override remote credentials
 clab-tools --remote-host 192.168.1.50 --remote-user clab --remote-password secret --enable-remote remote test-connection
@@ -311,18 +356,18 @@ clab-tools --remote-host 192.168.1.50 --remote-user clab --remote-password secre
 
 ```bash
 # Use different database
-clab-tools --db-url sqlite:///backup.db show-data
+clab-tools --db-url sqlite:///backup.db data show
 
 # Temporary database for testing
-clab-tools --db-url sqlite:///test.db import-csv -n test-nodes.csv -c test-connections.csv
+clab-tools --db-url sqlite:///test.db data import -n test-nodes.csv -c test-connections.csv
 ```
 
 ### Debug Mode
 
 ```bash
 # Enable debug logging
-clab-tools --debug --log-level DEBUG generate-topology -o lab.yml
+clab-tools --debug --log-level DEBUG topology generate -o lab.yml
 
 # JSON logging format
-clab-tools --log-format json --log-level INFO create-bridges
+clab-tools --log-format json --log-level INFO bridge create
 ```

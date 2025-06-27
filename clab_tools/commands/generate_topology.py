@@ -9,6 +9,7 @@ import sys
 
 import click
 
+from ..common.utils import handle_error, handle_success, with_lab_context
 from ..config.settings import get_settings
 from ..db.context import get_lab_db
 from ..remote import get_remote_host_manager
@@ -25,14 +26,13 @@ def generate_topology_command(
     template,
     kinds_config,
     validate,
-    current_lab,
     upload_remote=False,
 ):
     """
     Generate containerlab topology file from current lab data.
 
     Args:
-        db: Lab-aware database wrapper
+        db: DatabaseManager instance
         output: Output file path
         topology_name: Name for the topology
         prefix: Topology prefix
@@ -41,7 +41,6 @@ def generate_topology_command(
         template: Template file path
         kinds_config: Kinds configuration file path
         validate: Whether to validate the generated YAML
-        current_lab: Current lab name
         upload_remote: Whether to upload to remote host
     """
     settings = get_settings()
@@ -56,10 +55,8 @@ def generate_topology_command(
     if topology_name == "generated_lab":
         topology_name = settings.topology.default_topology_name
 
-    # Create a raw database manager for the TopologyGenerator
-    # (it expects the raw manager)
-    raw_db_manager = db.db_manager
-    generator = TopologyGenerator(raw_db_manager, template, kinds_config)
+    current_lab = db.get_current_lab()
+    generator = TopologyGenerator(db, template, kinds_config)
 
     click.echo(f"=== Topology Generation from Lab '{current_lab}' ===")
     click.echo(f"Output file: {output}")
@@ -70,51 +67,21 @@ def generate_topology_command(
     connections = db.get_all_connections()
 
     if not nodes:
-        click.echo(
-            f"⚠ Warning: No nodes found in lab '{current_lab}'. "
-            f"Run 'import-csv' first.",
-            err=True,
-        )
-        sys.exit(1)
+        handle_error(f"No nodes found in lab '{current_lab}'. Run 'import-csv' first.")
 
     click.echo(
         f"Using {len(nodes)} nodes and {len(connections)} connections "
         f"from lab '{current_lab}'"
     )
 
-    # Generate topology using lab-specific data
-    # We need to temporarily override the generator's database calls
-    # with lab-specific data - but avoid circular dependencies by
-    # caching the data first
-    original_get_all_nodes = raw_db_manager.get_all_nodes
-    original_get_all_connections = raw_db_manager.get_all_connections
-    original_save_topology_config = raw_db_manager.save_topology_config
-
-    # Cache the lab-specific data to avoid circular dependencies
-    cached_nodes = nodes  # We already fetched this above
-    cached_connections = connections  # We already fetched this above
-
-    # Override with lab-specific data (not methods)
-    raw_db_manager.get_all_nodes = lambda lab_name=None: cached_nodes
-    raw_db_manager.get_all_connections = lambda lab_name=None: cached_connections
-    # Override save_topology_config to automatically provide current lab name
-    raw_db_manager.save_topology_config = lambda name, prefix, mgmt_network, mgmt_subnet: original_save_topology_config(  # noqa: E501
-        name, prefix, mgmt_network, mgmt_subnet, current_lab
+    # Generate topology file
+    success = generator.generate_topology_file(
+        topology_name=topology_name,
+        prefix=prefix,
+        mgmt_network=mgmt_network,
+        mgmt_subnet=mgmt_subnet,
+        output_file=output,
     )
-
-    try:
-        success = generator.generate_topology_file(
-            topology_name=topology_name,
-            prefix=prefix,
-            mgmt_network=mgmt_network,
-            mgmt_subnet=mgmt_subnet,
-            output_file=output,
-        )
-    finally:
-        # Restore original methods
-        raw_db_manager.get_all_nodes = original_get_all_nodes
-        raw_db_manager.get_all_connections = original_get_all_connections
-        raw_db_manager.save_topology_config = original_save_topology_config
 
     if not success:
         sys.exit(1)
@@ -123,10 +90,9 @@ def generate_topology_command(
     if validate:
         is_valid, message = generator.validate_yaml(output)
         if is_valid:
-            click.echo(f"✓ {message}")
+            handle_success(message)
         else:
-            click.echo(f"✗ {message}", err=True)
-            sys.exit(1)
+            handle_error(message)
 
     # Upload to remote host if requested
     if upload_remote:
@@ -135,15 +101,11 @@ def generate_topology_command(
             try:
                 with remote_manager:
                     remote_path = remote_manager.upload_topology_file(output)
-                    click.echo(f"📤 Uploaded topology to remote host: {remote_path}")
+                    handle_success(f"Uploaded topology to remote host: {remote_path}")
             except Exception as e:
-                click.echo(f"✗ Failed to upload to remote host: {e}", err=True)
-                sys.exit(1)
+                handle_error(f"Failed to upload to remote host: {e}")
         else:
-            click.echo(
-                "⚠ Remote upload requested but remote host not configured", err=True
-            )
-            sys.exit(1)
+            handle_error("Remote upload requested but remote host not configured")
 
     # Calculate summary using cached data (already fetched above)
     bridges = [node for node in nodes if "bridge" in node[1].lower()]
@@ -152,7 +114,7 @@ def generate_topology_command(
     click.echo(f"  - Nodes: {len(nodes)} ({len(bridges)} bridges)")
     click.echo(f"  - Links: {len(connections)}")
     if upload_remote:
-        click.echo("  - Remote upload: ✓")
+        click.echo("  - Remote upload: Yes")
 
 
 @click.command()
@@ -179,6 +141,7 @@ def generate_topology_command(
 @click.option("--validate", is_flag=True, help="Validate generated YAML file")
 @click.option("--upload", is_flag=True, help="Upload topology file to remote host")
 @click.pass_context
+@with_lab_context
 def generate_topology(
     ctx,
     output,
@@ -201,7 +164,6 @@ def generate_topology(
     configured remote host.
     """
     db = get_lab_db(ctx.obj)
-    current_lab = ctx.obj["current_lab"]
     generate_topology_command(
         db,
         output,
@@ -212,6 +174,5 @@ def generate_topology(
         template,
         kinds_config,
         validate,
-        current_lab,
         upload,
     )

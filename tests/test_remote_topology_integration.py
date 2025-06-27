@@ -1,29 +1,5 @@
 """
-Tests for topology generation with re        generate_topology_command(
-            db=se        generate_topology_command(
-            db=self.mock_lab_db,
-            output="test.yml",
-            topology_name="test",
-            prefix="test",
-            mgmt_network="mgmt",
-            mgmt_subnet="192.168.1.0/24",
-            template="template.j2",
-            kinds_config="kinds.yml",
-            validate=False,
-            current_lab="testlab",
-            upload_remote=True,
-        )db,
-            output="test.yml",
-            topology_name="test",
-            prefix="test",
-            mgmt_network="mgmt",
-            mgmt_subnet="192.168.1.0/24",
-            template="template.j2",
-            kinds_config="kinds.yml",
-            validate=False,
-            current_lab="testlab",
-            upload_remote=False,
-        )functionality.
+Tests for topology generation with remote functionality.
 """
 
 import os
@@ -73,7 +49,6 @@ class TestTopologyGenerationWithRemote:
             template="template.j2",
             kinds_config="kinds.yml",
             validate=True,
-            current_lab="testlab",
             upload_remote=False,
         )
 
@@ -114,7 +89,6 @@ class TestTopologyGenerationWithRemote:
             template="template.j2",
             kinds_config="kinds.yml",
             validate=True,
-            current_lab="testlab",
             upload_remote=True,
         )
 
@@ -154,7 +128,6 @@ class TestTopologyGenerationWithRemote:
                 template="template.j2",
                 kinds_config="kinds.yml",
                 validate=True,
-                current_lab="testlab",
                 upload_remote=True,
             )
 
@@ -191,7 +164,6 @@ class TestTopologyGenerationWithRemote:
                 template="template.j2",
                 kinds_config="kinds.yml",
                 validate=True,
-                current_lab="testlab",
                 upload_remote=True,
             )
 
@@ -212,7 +184,6 @@ class TestTopologyGenerationWithRemote:
                 template="template.j2",
                 kinds_config="kinds.yml",
                 validate=True,
-                current_lab="testlab",
                 upload_remote=False,
             )
 
@@ -236,7 +207,6 @@ class TestTopologyGenerationWithRemote:
                 template="template.j2",
                 kinds_config="kinds.yml",
                 validate=True,
-                current_lab="testlab",
                 upload_remote=False,
             )
 
@@ -265,7 +235,6 @@ class TestTopologyGenerationWithRemote:
                 template="template.j2",
                 kinds_config="kinds.yml",
                 validate=True,
-                current_lab="testlab",
                 upload_remote=False,
             )
 

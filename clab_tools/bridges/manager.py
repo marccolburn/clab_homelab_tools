@@ -104,33 +104,82 @@ class BridgeManager:
 
         return missing
 
-    def create_bridge(self, bridge_name, dry_run=False):
-        """Create a VLAN-capable Linux bridge that supports VLANs 1-4094."""
+    def create_bridge(self, bridge_name, dry_run=False, **options):
+        """Create a Linux bridge with configurable options.
+
+        Args:
+            bridge_name: Name of the bridge to create
+            dry_run: If True, only show what would be done
+            **options: Bridge creation options:
+                - vlan_filtering: Enable VLAN filtering (default: True)
+                - stp: Enable spanning tree protocol (default: False)
+                - interfaces: List of interfaces to add to bridge
+                - vid_range: VLAN ID range to add (default: "1-4094")
+
+        Returns:
+            Tuple of (success: bool, message: str)
+        """
         if self.check_bridge_exists(bridge_name):
             return True, f"Bridge {bridge_name} already exists"
 
-        commands = [
-            # Create bridge with VLAN filtering enabled
-            self._build_command(
-                [
-                    "ip",
-                    "link",
-                    "add",
-                    "name",
-                    bridge_name,
-                    "type",
-                    "bridge",
-                    "vlan_filtering",
-                    "1",
-                ]
-            ),
-            # Bring bridge up
-            self._build_command(["ip", "link", "set", bridge_name, "up"]),
-            # Add all VLANs 1-4094 to the bridge
-            self._build_command(
-                ["bridge", "vlan", "add", "vid", "1-4094", "dev", bridge_name, "self"]
-            ),
-        ]
+        # Parse options with defaults
+        vlan_filtering = options.get("vlan_filtering", True)
+        stp = options.get("stp", False)
+        interfaces = options.get("interfaces", [])
+        vid_range = options.get("vid_range", "1-4094")
+
+        commands = []
+
+        # Create bridge command
+        bridge_cmd = ["ip", "link", "add", "name", bridge_name, "type", "bridge"]
+        if vlan_filtering:
+            bridge_cmd.extend(["vlan_filtering", "1"])
+        commands.append(self._build_command(bridge_cmd))
+
+        # Bring bridge up
+        commands.append(self._build_command(["ip", "link", "set", bridge_name, "up"]))
+
+        # Configure spanning tree if requested
+        if not stp:
+            commands.append(
+                self._build_command(
+                    [
+                        "ip",
+                        "link",
+                        "set",
+                        bridge_name,
+                        "type",
+                        "bridge",
+                        "stp_state",
+                        "0",
+                    ]
+                )
+            )
+
+        # Add VLANs if VLAN filtering is enabled
+        if vlan_filtering and vid_range:
+            commands.append(
+                self._build_command(
+                    [
+                        "bridge",
+                        "vlan",
+                        "add",
+                        "vid",
+                        vid_range,
+                        "dev",
+                        bridge_name,
+                        "self",
+                    ]
+                )
+            )
+
+        # Add interfaces if specified
+        for interface in interfaces:
+            commands.append(
+                self._build_command(
+                    ["ip", "link", "set", interface, "master", bridge_name]
+                )
+            )
 
         location = (
             "remote host"
@@ -139,22 +188,37 @@ class BridgeManager:
         )
 
         if dry_run:
-            click.echo(f"Would create VLAN-capable bridge on {location}: {bridge_name}")
+            click.echo(f"Would create bridge on {location}: {bridge_name}")
+            click.echo(f"  VLAN filtering: {vlan_filtering}")
+            click.echo(f"  Spanning Tree: {stp}")
+            if interfaces:
+                click.echo(f"  Interfaces: {', '.join(interfaces)}")
+            if vlan_filtering and vid_range:
+                click.echo(f"  VLAN range: {vid_range}")
             for cmd in commands:
                 click.echo(f"  Command: {' '.join(cmd)}")
-            click.echo("Bridge will support VLANs 1-4094")
             return (
                 True,
-                f"Dry run: would create VLAN-capable {bridge_name} on {location}",
+                f"Dry run: would create bridge {bridge_name} on {location}",
             )
 
         try:
             for cmd in commands:
                 self._execute_command(cmd, capture_output=True, text=True, check=True)
+
+            # Build feature description
+            features = []
+            if vlan_filtering:
+                features.append(f"VLAN filtering ({vid_range})")
+            if not stp:
+                features.append("STP disabled")
+            if interfaces:
+                features.append(f"{len(interfaces)} interfaces")
+
+            feature_str = f" ({', '.join(features)})" if features else ""
             return (
                 True,
-                f"Successfully created VLAN-capable bridge {bridge_name} on {location} "
-                f"(VLANs 1-4094)",
+                f"Successfully created bridge {bridge_name} on {location}{feature_str}",
             )
         except subprocess.CalledProcessError as e:
             return (
@@ -198,8 +262,8 @@ class BridgeManager:
         except Exception as e:
             return False, f"Error deleting bridge {bridge_name} on {location}: {e}"
 
-    def create_all_bridges(self, dry_run=False, force=False):
-        """Create all missing bridges."""
+    def create_topology_bridges(self, dry_run=False, force=False):
+        """Create all bridges from topology (current behavior)."""
         missing_bridges = self.get_missing_bridges()
 
         if not missing_bridges:
@@ -232,6 +296,34 @@ class BridgeManager:
                     f"Created {success_count}/{len(missing_bridges)} bridges. "
                     f"Check errors above for details.",
                 )
+
+    def create_bridge_from_spec(self, spec, dry_run=False):
+        """Create bridge from specification (for extensibility).
+
+        Args:
+            spec: Dictionary containing bridge specification:
+                - name: Bridge name (required)
+                - vlan_filtering: Enable VLAN filtering (optional, default: True)
+                - stp: Enable spanning tree protocol (optional, default: False)
+                - interfaces: List of interfaces to add (optional)
+                - vid_range: VLAN ID range (optional, default: "1-4094")
+            dry_run: If True, only show what would be done
+
+        Returns:
+            Tuple of (success: bool, message: str)
+        """
+        if "name" not in spec:
+            return False, "Bridge specification must include 'name'"
+
+        bridge_name = spec["name"]
+        options = {k: v for k, v in spec.items() if k != "name"}
+
+        return self.create_bridge(bridge_name, dry_run=dry_run, **options)
+
+    # Maintain backward compatibility
+    def create_all_bridges(self, dry_run=False, force=False):
+        """Legacy method - delegates to create_topology_bridges."""
+        return self.create_topology_bridges(dry_run=dry_run, force=force)
 
     def delete_all_bridges(self, dry_run=False, force=False):
         """Delete all existing bridges that match our pattern."""

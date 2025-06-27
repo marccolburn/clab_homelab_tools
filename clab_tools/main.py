@@ -15,6 +15,7 @@ from clab_tools import __version__
 from clab_tools.commands.bridge_commands import (
     cleanup_bridges,
     configure_vlans,
+    create_bridge,
     create_bridges,
     list_bridges,
 )
@@ -123,14 +124,16 @@ def cli(
 
     # Initialize database manager (multi-lab first approach)
     try:
-        db_manager = DatabaseManager(settings=settings.database)
+        current_lab = settings.lab.current_lab
+        db_manager = DatabaseManager(
+            settings=settings.database, default_lab=current_lab
+        )
         if not db_manager.health_check():
             logger.error("Database health check failed")
             click.echo("✗ Database connection failed", err=True)
             sys.exit(1)
 
         # Ensure current lab exists
-        current_lab = settings.lab.current_lab
         db_manager.get_or_create_lab(current_lab)
         logger.info("Using lab context", lab=current_lab)
 
@@ -139,30 +142,55 @@ def cli(
         click.echo(f"✗ Database initialization failed: {e}", err=True)
         sys.exit(1)
 
-    # Store in context for commands
-    ctx.obj["raw_db_manager"] = db_manager
-    ctx.obj["db_manager"] = db_manager  # For compatibility with bridge commands
-    ctx.obj["current_lab"] = current_lab
-    ctx.obj["lab_name"] = current_lab  # For compatibility with bridge commands
+    # Store simplified context for commands
+    ctx.obj["db"] = db_manager
     ctx.obj["settings"] = settings
     ctx.obj["debug"] = settings.debug
+    # Keep these for bridge commands until they're updated
+    ctx.obj["db_manager"] = db_manager
+    ctx.obj["lab_name"] = current_lab
 
     logger.debug("CLI initialization completed")
 
 
-# Register all command modules
-cli.add_command(import_csv)
-cli.add_command(generate_topology)
-cli.add_command(create_bridges)
-cli.add_command(cleanup_bridges)
-cli.add_command(configure_vlans)
-cli.add_command(list_bridges)
-cli.add_command(show_data)
-cli.add_command(clear_data)
+# Create command groups
+@cli.group()
+def data():
+    """Data management commands for importing, exporting, and viewing lab data."""
+    pass
 
-# Command groups
+
+@cli.group()
+def topology():
+    """Topology generation and validation commands."""
+    pass
+
+
+@cli.group()
+def bridge():
+    """Bridge management commands for network connectivity."""
+    pass
+
+
+# Add individual commands to groups
+data.add_command(import_csv, name="import")
+data.add_command(show_data, name="show")
+data.add_command(clear_data, name="clear")
+
+topology.add_command(generate_topology, name="generate")
+
+bridge.add_command(create_bridges, name="create")
+bridge.add_command(create_bridge, name="create-bridge")
+bridge.add_command(cleanup_bridges, name="cleanup")
+bridge.add_command(configure_vlans, name="configure")
+bridge.add_command(list_bridges, name="list")
+
+# Register command groups and existing groups
+cli.add_command(lab_commands, name="lab")
 cli.add_command(remote)
-cli.add_command(lab_commands)
+cli.add_command(data)
+cli.add_command(topology)
+cli.add_command(bridge)
 
 
 if __name__ == "__main__":
