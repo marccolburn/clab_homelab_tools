@@ -55,7 +55,6 @@ class TestGenerateTopologyCommand:
                     template="template.j2",
                     kinds_config="kinds.yml",
                     validate=False,
-                    current_lab="testlab",
                     upload_remote=False,
                 )
 
@@ -97,7 +96,6 @@ class TestGenerateTopologyCommand:
                     template="template.j2",
                     kinds_config="kinds.yml",
                     validate=False,
-                    current_lab="testlab",
                     upload_remote=False,
                 )
 
@@ -140,7 +138,6 @@ class TestGenerateTopologyCommand:
                     template="template.j2",
                     kinds_config="kinds.yml",
                     validate=False,
-                    current_lab="testlab",
                     upload_remote=False,
                 )
 
@@ -181,7 +178,6 @@ class TestGenerateTopologyCommand:
                     template="template.j2",
                     kinds_config="kinds.yml",
                     validate=False,
-                    current_lab="testlab",
                     upload_remote=False,
                 )
 
@@ -226,7 +222,6 @@ class TestGenerateTopologyCommand:
                         template="template.j2",
                         kinds_config="kinds.yml",
                         validate=False,
-                        current_lab="testlab",
                         upload_remote=False,
                     )
 

@@ -108,7 +108,7 @@ class TestRemoteBridgeManager:
         assert success
         assert "Successfully created" in message
         assert "local system" in message
-        assert "VLAN-capable" in message
+        assert "VLAN filtering" in message
 
     def test_remote_create_bridge_success(self):
         """Test successful remote bridge creation."""
@@ -129,7 +129,7 @@ class TestRemoteBridgeManager:
         assert success
         assert "Successfully created" in message
         assert "remote host" in message
-        assert "VLAN-capable" in message
+        assert "VLAN filtering" in message
 
     def test_remote_create_bridge_dry_run(self):
         """Test remote bridge creation in dry run mode."""
@@ -200,19 +200,13 @@ class TestRemoteBridgeCommands:
             ("router1", "linux", "192.168.1.1"),
         ]
 
-    @patch("clab_tools.commands.bridge_commands.LabAwareDB")
     @patch("clab_tools.commands.bridge_commands.get_remote_host_manager")
     @patch("clab_tools.commands.bridge_commands.BridgeManager")
     def test_create_bridges_command_local(
-        self, mock_bridge_manager_class, mock_get_remote, mock_lab_aware_db
+        self, mock_bridge_manager_class, mock_get_remote
     ):
         """Test create bridges command running locally."""
         mock_get_remote.return_value = None
-
-        # Mock LabAwareDB context manager
-        mock_lab_db = Mock()
-        mock_lab_aware_db.return_value.__enter__.return_value = mock_lab_db
-        mock_lab_aware_db.return_value.__exit__.return_value = None
 
         mock_manager = Mock()
         mock_bridge_manager_class.return_value = mock_manager
@@ -221,20 +215,16 @@ class TestRemoteBridgeCommands:
         mock_manager.get_missing_bridges.return_value = ["br-switch1"]
         mock_manager.create_all_bridges.return_value = (True, "Created 1/1 bridges")
 
-        create_bridges_command(self.mock_db, "test-lab", dry_run=False, force=True)
+        create_bridges_command(self.mock_db, dry_run=False, force=True)
 
         # Verify local manager was created
-        mock_lab_aware_db.assert_called_with(self.mock_db, "test-lab")
-        mock_bridge_manager_class.assert_called_with(
-            mock_lab_aware_db.return_value.__enter__.return_value
-        )
+        mock_bridge_manager_class.assert_called_with(self.mock_db)
         mock_manager.create_all_bridges.assert_called_with(dry_run=False, force=True)
 
-    @patch("clab_tools.commands.bridge_commands.LabAwareDB")
     @patch("clab_tools.commands.bridge_commands.get_remote_host_manager")
     @patch("clab_tools.commands.bridge_commands.BridgeManager")
     def test_create_bridges_command_remote(
-        self, mock_bridge_manager_class, mock_get_remote, mock_lab_aware_db
+        self, mock_bridge_manager_class, mock_get_remote
     ):
         """Test create bridges command running remotely."""
         mock_remote_manager = Mock()
@@ -242,11 +232,6 @@ class TestRemoteBridgeCommands:
         mock_remote_manager.__exit__ = Mock(return_value=None)
         mock_get_remote.return_value = mock_remote_manager
 
-        # Mock LabAwareDB context manager
-        mock_lab_db = Mock()
-        mock_lab_aware_db.return_value.__enter__.return_value = mock_lab_db
-        mock_lab_aware_db.return_value.__exit__.return_value = None
-
         mock_manager = Mock()
         mock_bridge_manager_class.return_value = mock_manager
         mock_manager.get_bridge_list_from_db.return_value = ["br-switch1"]
@@ -254,21 +239,17 @@ class TestRemoteBridgeCommands:
         mock_manager.get_missing_bridges.return_value = ["br-switch1"]
         mock_manager.create_all_bridges.return_value = (True, "Created 1/1 bridges")
 
-        create_bridges_command(self.mock_db, "test-lab", dry_run=False, force=True)
+        create_bridges_command(self.mock_db, dry_run=False, force=True)
 
         # Verify remote manager was used
-        mock_lab_aware_db.assert_called_with(self.mock_db, "test-lab")
-        mock_bridge_manager_class.assert_called_with(
-            mock_lab_aware_db.return_value.__enter__.return_value, mock_remote_manager
-        )
+        mock_bridge_manager_class.assert_called_with(self.mock_db, mock_remote_manager)
         mock_remote_manager.__enter__.assert_called_once()
         mock_remote_manager.__exit__.assert_called_once()
 
-    @patch("clab_tools.commands.bridge_commands.LabAwareDB")
     @patch("clab_tools.commands.bridge_commands.get_remote_host_manager")
     @patch("clab_tools.commands.bridge_commands.BridgeManager")
     def test_delete_bridges_command_remote(
-        self, mock_bridge_manager_class, mock_get_remote, mock_lab_aware_db
+        self, mock_bridge_manager_class, mock_get_remote
     ):
         """Test delete bridges command running remotely."""
         mock_remote_manager = Mock()
@@ -276,23 +257,15 @@ class TestRemoteBridgeCommands:
         mock_remote_manager.__exit__ = Mock(return_value=None)
         mock_get_remote.return_value = mock_remote_manager
 
-        # Mock LabAwareDB context manager
-        mock_lab_db = Mock()
-        mock_lab_aware_db.return_value.__enter__.return_value = mock_lab_db
-        mock_lab_aware_db.return_value.__exit__.return_value = None
-
         mock_manager = Mock()
         mock_bridge_manager_class.return_value = mock_manager
         mock_manager.get_existing_bridges.return_value = ["br-switch1"]
         mock_manager.delete_all_bridges.return_value = (True, "Deleted 1/1 bridges")
 
-        delete_bridges_command(self.mock_db, "test-lab", dry_run=False, force=True)
+        delete_bridges_command(self.mock_db, dry_run=False, force=True)
 
         # Verify remote manager was used
-        mock_lab_aware_db.assert_called_with(self.mock_db, "test-lab")
-        mock_bridge_manager_class.assert_called_with(
-            mock_lab_aware_db.return_value.__enter__.return_value, mock_remote_manager
-        )
+        mock_bridge_manager_class.assert_called_with(self.mock_db, mock_remote_manager)
         mock_manager.delete_all_bridges.assert_called_with(dry_run=False, force=True)
 
 
@@ -443,10 +416,11 @@ class TestBridgeManagerSudoCommands:
         expected_calls = [
             "ip link add name test-bridge type bridge vlan_filtering 1",
             "ip link set test-bridge up",
+            "ip link set test-bridge type bridge stp_state 0",
             "bridge vlan add vid 1-4094 dev test-bridge self",
         ]
 
-        assert remote_manager.execute_command.call_count == 3
+        assert remote_manager.execute_command.call_count == 4
         for i, expected_cmd in enumerate(expected_calls):
             actual_call = remote_manager.execute_command.call_args_list[i]
             assert actual_call[0][0] == expected_cmd
