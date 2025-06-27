@@ -200,13 +200,20 @@ class TestRemoteBridgeCommands:
             ("router1", "linux", "192.168.1.1"),
         ]
 
+    @patch("clab_tools.commands.bridge_commands.LabAwareDB")
     @patch("clab_tools.commands.bridge_commands.get_remote_host_manager")
     @patch("clab_tools.commands.bridge_commands.BridgeManager")
     def test_create_bridges_command_local(
-        self, mock_bridge_manager_class, mock_get_remote
+        self, mock_bridge_manager_class, mock_get_remote, mock_lab_aware_db
     ):
         """Test create bridges command running locally."""
         mock_get_remote.return_value = None
+
+        # Mock LabAwareDB context manager
+        mock_lab_db = Mock()
+        mock_lab_aware_db.return_value.__enter__.return_value = mock_lab_db
+        mock_lab_aware_db.return_value.__exit__.return_value = None
+
         mock_manager = Mock()
         mock_bridge_manager_class.return_value = mock_manager
         mock_manager.get_bridge_list_from_db.return_value = ["br-switch1"]
@@ -214,16 +221,20 @@ class TestRemoteBridgeCommands:
         mock_manager.get_missing_bridges.return_value = ["br-switch1"]
         mock_manager.create_all_bridges.return_value = (True, "Created 1/1 bridges")
 
-        create_bridges_command(self.mock_db, dry_run=False, force=True)
+        create_bridges_command(self.mock_db, "test-lab", dry_run=False, force=True)
 
         # Verify local manager was created
-        mock_bridge_manager_class.assert_called_with(self.mock_db)
+        mock_lab_aware_db.assert_called_with(self.mock_db, "test-lab")
+        mock_bridge_manager_class.assert_called_with(
+            mock_lab_aware_db.return_value.__enter__.return_value
+        )
         mock_manager.create_all_bridges.assert_called_with(dry_run=False, force=True)
 
+    @patch("clab_tools.commands.bridge_commands.LabAwareDB")
     @patch("clab_tools.commands.bridge_commands.get_remote_host_manager")
     @patch("clab_tools.commands.bridge_commands.BridgeManager")
     def test_create_bridges_command_remote(
-        self, mock_bridge_manager_class, mock_get_remote
+        self, mock_bridge_manager_class, mock_get_remote, mock_lab_aware_db
     ):
         """Test create bridges command running remotely."""
         mock_remote_manager = Mock()
@@ -231,6 +242,11 @@ class TestRemoteBridgeCommands:
         mock_remote_manager.__exit__ = Mock(return_value=None)
         mock_get_remote.return_value = mock_remote_manager
 
+        # Mock LabAwareDB context manager
+        mock_lab_db = Mock()
+        mock_lab_aware_db.return_value.__enter__.return_value = mock_lab_db
+        mock_lab_aware_db.return_value.__exit__.return_value = None
+
         mock_manager = Mock()
         mock_bridge_manager_class.return_value = mock_manager
         mock_manager.get_bridge_list_from_db.return_value = ["br-switch1"]
@@ -238,17 +254,21 @@ class TestRemoteBridgeCommands:
         mock_manager.get_missing_bridges.return_value = ["br-switch1"]
         mock_manager.create_all_bridges.return_value = (True, "Created 1/1 bridges")
 
-        create_bridges_command(self.mock_db, dry_run=False, force=True)
+        create_bridges_command(self.mock_db, "test-lab", dry_run=False, force=True)
 
         # Verify remote manager was used
-        mock_bridge_manager_class.assert_called_with(self.mock_db, mock_remote_manager)
+        mock_lab_aware_db.assert_called_with(self.mock_db, "test-lab")
+        mock_bridge_manager_class.assert_called_with(
+            mock_lab_aware_db.return_value.__enter__.return_value, mock_remote_manager
+        )
         mock_remote_manager.__enter__.assert_called_once()
         mock_remote_manager.__exit__.assert_called_once()
 
+    @patch("clab_tools.commands.bridge_commands.LabAwareDB")
     @patch("clab_tools.commands.bridge_commands.get_remote_host_manager")
     @patch("clab_tools.commands.bridge_commands.BridgeManager")
     def test_delete_bridges_command_remote(
-        self, mock_bridge_manager_class, mock_get_remote
+        self, mock_bridge_manager_class, mock_get_remote, mock_lab_aware_db
     ):
         """Test delete bridges command running remotely."""
         mock_remote_manager = Mock()
@@ -256,15 +276,23 @@ class TestRemoteBridgeCommands:
         mock_remote_manager.__exit__ = Mock(return_value=None)
         mock_get_remote.return_value = mock_remote_manager
 
+        # Mock LabAwareDB context manager
+        mock_lab_db = Mock()
+        mock_lab_aware_db.return_value.__enter__.return_value = mock_lab_db
+        mock_lab_aware_db.return_value.__exit__.return_value = None
+
         mock_manager = Mock()
         mock_bridge_manager_class.return_value = mock_manager
         mock_manager.get_existing_bridges.return_value = ["br-switch1"]
         mock_manager.delete_all_bridges.return_value = (True, "Deleted 1/1 bridges")
 
-        delete_bridges_command(self.mock_db, dry_run=False, force=True)
+        delete_bridges_command(self.mock_db, "test-lab", dry_run=False, force=True)
 
         # Verify remote manager was used
-        mock_bridge_manager_class.assert_called_with(self.mock_db, mock_remote_manager)
+        mock_lab_aware_db.assert_called_with(self.mock_db, "test-lab")
+        mock_bridge_manager_class.assert_called_with(
+            mock_lab_aware_db.return_value.__enter__.return_value, mock_remote_manager
+        )
         mock_manager.delete_all_bridges.assert_called_with(dry_run=False, force=True)
 
 

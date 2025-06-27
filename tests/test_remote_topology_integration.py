@@ -1,5 +1,29 @@
 """
-Tests for topology generation with remote upload functionality.
+Tests for topology generation with re        generate_topology_command(
+            db=se        generate_topology_command(
+            db=self.mock_lab_db,
+            output="test.yml",
+            topology_name="test",
+            prefix="test",
+            mgmt_network="mgmt",
+            mgmt_subnet="192.168.1.0/24",
+            template="template.j2",
+            kinds_config="kinds.yml",
+            validate=False,
+            current_lab="testlab",
+            upload_remote=True,
+        )db,
+            output="test.yml",
+            topology_name="test",
+            prefix="test",
+            mgmt_network="mgmt",
+            mgmt_subnet="192.168.1.0/24",
+            template="template.j2",
+            kinds_config="kinds.yml",
+            validate=False,
+            current_lab="testlab",
+            upload_remote=False,
+        )functionality.
 """
 
 import os
@@ -17,12 +41,12 @@ class TestTopologyGenerationWithRemote:
 
     def setup_method(self):
         """Set up test fixtures."""
-        self.mock_db = Mock()
-        self.mock_db.get_all_nodes.return_value = [
+        self.mock_lab_db = Mock()
+        self.mock_lab_db.get_all_nodes.return_value = [
             ("router1", "linux", "192.168.1.1"),
             ("switch1", "bridge", None),
         ]
-        self.mock_db.get_all_connections.return_value = [
+        self.mock_lab_db.get_all_connections.return_value = [
             ("router1", "eth0", "switch1", "eth1"),
         ]
 
@@ -40,7 +64,7 @@ class TestTopologyGenerationWithRemote:
         mock_get_remote.return_value = None
 
         generate_topology_command(
-            db_manager=self.mock_db,
+            db=self.mock_lab_db,
             output="test.yml",
             topology_name="test",
             prefix="test",
@@ -49,6 +73,7 @@ class TestTopologyGenerationWithRemote:
             template="template.j2",
             kinds_config="kinds.yml",
             validate=True,
+            current_lab="testlab",
             upload_remote=False,
         )
 
@@ -80,7 +105,7 @@ class TestTopologyGenerationWithRemote:
         mock_get_remote.return_value = mock_remote_manager
 
         generate_topology_command(
-            db_manager=self.mock_db,
+            db=self.mock_lab_db,
             output="test.yml",
             topology_name="test",
             prefix="test",
@@ -89,6 +114,7 @@ class TestTopologyGenerationWithRemote:
             template="template.j2",
             kinds_config="kinds.yml",
             validate=True,
+            current_lab="testlab",
             upload_remote=True,
         )
 
@@ -119,7 +145,7 @@ class TestTopologyGenerationWithRemote:
 
         with pytest.raises(SystemExit):
             generate_topology_command(
-                db_manager=self.mock_db,
+                db=self.mock_lab_db,
                 output="test.yml",
                 topology_name="test",
                 prefix="test",
@@ -128,6 +154,7 @@ class TestTopologyGenerationWithRemote:
                 template="template.j2",
                 kinds_config="kinds.yml",
                 validate=True,
+                current_lab="testlab",
                 upload_remote=True,
             )
 
@@ -155,7 +182,7 @@ class TestTopologyGenerationWithRemote:
 
         with pytest.raises(SystemExit):
             generate_topology_command(
-                db_manager=self.mock_db,
+                db=self.mock_lab_db,
                 output="test.yml",
                 topology_name="test",
                 prefix="test",
@@ -164,6 +191,7 @@ class TestTopologyGenerationWithRemote:
                 template="template.j2",
                 kinds_config="kinds.yml",
                 validate=True,
+                current_lab="testlab",
                 upload_remote=True,
             )
 
@@ -171,11 +199,11 @@ class TestTopologyGenerationWithRemote:
     def test_generate_with_no_nodes(self, mock_generator_class):
         """Test topology generation with no nodes in database."""
         # Empty database
-        self.mock_db.get_all_nodes.return_value = []
+        self.mock_lab_db.get_all_nodes.return_value = []
 
         with pytest.raises(SystemExit):
             generate_topology_command(
-                db_manager=self.mock_db,
+                db=self.mock_lab_db,
                 output="test.yml",
                 topology_name="test",
                 prefix="test",
@@ -184,6 +212,7 @@ class TestTopologyGenerationWithRemote:
                 template="template.j2",
                 kinds_config="kinds.yml",
                 validate=True,
+                current_lab="testlab",
                 upload_remote=False,
             )
 
@@ -198,7 +227,7 @@ class TestTopologyGenerationWithRemote:
 
         with pytest.raises(SystemExit):
             generate_topology_command(
-                db_manager=self.mock_db,
+                db=self.mock_lab_db,
                 output="test.yml",
                 topology_name="test",
                 prefix="test",
@@ -207,6 +236,7 @@ class TestTopologyGenerationWithRemote:
                 template="template.j2",
                 kinds_config="kinds.yml",
                 validate=True,
+                current_lab="testlab",
                 upload_remote=False,
             )
 
@@ -225,7 +255,7 @@ class TestTopologyGenerationWithRemote:
 
         # Should not raise SystemExit, just log the validation error
         generate_topology_command(
-            db_manager=self.mock_db,
+            db=self.mock_lab_db,
             output="test.yml",
             topology_name="test",
             prefix="test",
@@ -234,6 +264,7 @@ class TestTopologyGenerationWithRemote:
             template="template.j2",
             kinds_config="kinds.yml",
             validate=True,
+            current_lab="testlab",
             upload_remote=False,
         )
 

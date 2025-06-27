@@ -78,6 +78,23 @@ class TopologySettings(BaseSettings):
     model_config = ConfigDict(env_prefix="CLAB_TOPOLOGY_")
 
 
+class LabSettings(BaseSettings):
+    """Lab management settings."""
+
+    current_lab: str = Field(default="default", description="Current active lab name")
+    use_global_database: bool = Field(
+        default=False, description="Use global database instead of current directory"
+    )
+    global_database_path: Optional[str] = Field(
+        default=None, description="Path to global database directory"
+    )
+    auto_create_lab: bool = Field(
+        default=True, description="Automatically create lab if it doesn't exist"
+    )
+
+    model_config = ConfigDict(env_prefix="CLAB_LAB_")
+
+
 class BridgeSettings(BaseSettings):
     """Bridge management settings."""
 
@@ -150,6 +167,7 @@ class Settings(BaseSettings):
     topology: TopologySettings = Field(default_factory=TopologySettings)
     bridges: BridgeSettings = Field(default_factory=BridgeSettings)
     remote: RemoteHostSettings = Field(default_factory=RemoteHostSettings)
+    lab: LabSettings = Field(default_factory=LabSettings)
 
     # General settings
     config_file: Optional[str] = Field(
@@ -194,6 +212,7 @@ class Settings(BaseSettings):
             "topology": self.topology.model_dump(),
             "bridges": self.bridges.model_dump(),
             "remote": self.remote.model_dump(),
+            "lab": self.lab.model_dump(),
             "debug": self.debug,
             "config_file": self.config_file,
         }

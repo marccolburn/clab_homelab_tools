@@ -1,53 +1,339 @@
 # Troubleshooting Guide
 
-Common issues and solutions for the Containerlab Homelab Tools.
+Common issues and solutions for clab-tools.
 
 ## Quick Diagnosis
 
-### Check System Status
 ```bash
-# Verify Python version
-python --version
+# Check installation
+./clab-tools.sh --version
+./clab-tools.sh --help
 
-# Check virtual environment
-which python
-echo $VIRTUAL_ENV
+# Test database
+./clab-tools.sh show-data
 
-# Test basic functionality
-python main.py --help
+# Test configuration
+./clab-tools.sh config show
 
-# Run health check
-python main.py --debug show-data
+# Enable debug mode
+./clab-tools.sh --debug --verbose [command]
 ```
 
-## Common Issues
+## Installation Issues
 
-### Installation Problems
+### Command Not Found
 
-#### Python Version Issues
-**Problem**: `python` command not found or wrong version
+**Problem**: `./clab-tools.sh: command not found`
+
+**Solutions**:
 ```bash
-$ python main.py --help
--bash: python: command not found
+# Make executable
+chmod +x clab-tools.sh
+
+# Check Python installation
+python3 --version
+
+# Reinstall dependencies
+pip install -r requirements.txt
 ```
 
-**Solution**:
+### Python Module Errors
+
+**Problem**: `ModuleNotFoundError: No module named 'click'`
+
+**Solutions**:
 ```bash
-# Use python3 explicitly
-python3 main.py --help
+# Install in virtual environment
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
 
-# Or create alias
-alias python=python3
-
-# Check available Python versions
-ls /usr/bin/python*
+# Or install globally
+pip3 install -r requirements.txt
 ```
 
-#### Virtual Environment Issues
-**Problem**: Dependencies not found or version conflicts
+## Database Issues
+
+### Database Connection Errors
+
+**Problem**: `Database file not found` or connection errors
+
+**Solutions**:
 ```bash
-$ python main.py --help
-ModuleNotFoundError: No module named 'click'
+# Initialize database
+./clab-tools.sh db init
+
+# Check database location
+ls -la clab_topology.db
+
+# Reset database
+rm clab_topology.db
+./clab-tools.sh db init
+```
+
+### Data Import Issues
+
+**Problem**: CSV import fails or data corruption
+
+**Solutions**:
+```bash
+# Validate CSV format
+./clab-tools.sh import-csv --validate nodes.csv
+
+# Check CSV headers
+head -1 nodes.csv
+
+# Clear and re-import
+./clab-tools.sh clear-data
+./clab-tools.sh import-csv nodes.csv connections.csv
+```
+
+## Bridge and Network Issues
+
+### Bridge Creation Failures
+
+**Problem**: Bridge creation fails with permission errors
+
+**Solutions**:
+```bash
+# Run with sudo
+sudo ./clab-tools.sh bridge create br-mgmt
+
+# Check existing bridges
+ip link show type bridge
+
+# Cleanup failed bridges
+sudo ip link delete br-mgmt type bridge
+```
+
+### Network Interface Issues
+
+**Problem**: Interface not found or in use
+
+**Solutions**:
+```bash
+# List available interfaces
+ip link show
+
+# Check interface status
+ip link show eth0
+
+# Bring interface down if needed
+sudo ip link set eth0 down
+```
+
+## Remote Host Issues
+
+### SSH Connection Problems
+
+**Problem**: Cannot connect to remote hosts
+
+**Solutions**:
+```bash
+# Test SSH manually
+ssh -v user@remote-host
+
+# Check SSH key permissions
+chmod 600 ~/.ssh/id_rsa
+chmod 644 ~/.ssh/id_rsa.pub
+
+# Update known_hosts
+ssh-keyscan -H remote-host >> ~/.ssh/known_hosts
+```
+
+### Remote Command Failures
+
+**Problem**: Commands fail on remote hosts
+
+**Solutions**:
+```bash
+# Test remote connectivity
+./clab-tools.sh remote test-connection hostname
+
+# Check remote containerlab installation
+ssh user@remote-host "which containerlab"
+
+# Check remote sudo access
+ssh user@remote-host "sudo -l"
+```
+
+## Containerlab Integration
+
+### Containerlab Not Found
+
+**Problem**: `containerlab: command not found`
+
+**Solutions**:
+```bash
+# Install containerlab
+bash -c "$(curl -sL https://get.containerlab.dev)"
+
+# Or use package manager
+sudo apt install containerlab  # Ubuntu/Debian
+brew install containerlab      # macOS
+```
+
+### Docker/Container Issues
+
+**Problem**: Container runtime errors
+
+**Solutions**:
+```bash
+# Check Docker status
+docker --version
+systemctl status docker
+
+# Test container access
+docker run --rm hello-world
+
+# Check containerlab version
+containerlab version
+```
+
+## Configuration Issues
+
+### Config File Errors
+
+**Problem**: YAML parsing errors or invalid configuration
+
+**Solutions**:
+```bash
+# Validate YAML syntax
+python3 -c "import yaml; yaml.safe_load(open('config.yaml'))"
+
+# Show effective configuration
+./clab-tools.sh config show
+
+# Reset to defaults
+cp config.local.example.yaml config.local.yaml
+```
+
+### Environment Variable Issues
+
+**Problem**: Environment variables not recognized
+
+**Solutions**:
+```bash
+# Check current environment
+env | grep CLAB
+
+# Set environment variables
+export CLAB_PROJECT_NAME="my-lab"
+export CLAB_LOG_LEVEL="DEBUG"
+
+# Make permanent in shell profile
+echo 'export CLAB_PROJECT_NAME="my-lab"' >> ~/.bashrc
+```
+
+## Performance Issues
+
+### Slow Database Operations
+
+**Problem**: Database queries taking too long
+
+**Solutions**:
+```bash
+# Rebuild database with indexes
+./clab-tools.sh db init --rebuild
+
+# Check database size
+ls -lh clab_topology.db
+
+# Optimize database
+sqlite3 clab_topology.db "VACUUM;"
+```
+
+### Large Topology Generation
+
+**Problem**: Topology generation times out or fails
+
+**Solutions**:
+```bash
+# Generate in smaller batches
+./clab-tools.sh topology generate --max-nodes 50
+
+# Increase timeout
+export CLAB_TIMEOUT=300
+./clab-tools.sh topology generate
+
+# Use streaming mode for large datasets
+./clab-tools.sh topology generate --stream
+```
+
+## Debug Mode
+
+### Enable Verbose Logging
+
+```bash
+# Full debug output
+./clab-tools.sh --debug --verbose command
+
+# Log to file
+./clab-tools.sh --debug command 2>&1 | tee debug.log
+
+# Set environment variable
+export CLAB_LOG_LEVEL=DEBUG
+```
+
+### Common Debug Commands
+
+```bash
+# Show all data
+./clab-tools.sh show-data --verbose
+
+# Test configuration
+./clab-tools.sh config validate --debug
+
+# Check database schema
+./clab-tools.sh db info --verbose
+
+# Test remote connections
+./clab-tools.sh remote test-all --debug
+```
+
+## Getting Help
+
+### Log Information
+
+When reporting issues, include:
+
+```bash
+# System information
+./clab-tools.sh --version
+python3 --version
+uname -a
+
+# Configuration
+./clab-tools.sh config show
+
+# Error output with debug
+./clab-tools.sh --debug [failing-command] 2>&1
+```
+
+### Common Support Resources
+
+- **GitHub Issues**: Report bugs and feature requests
+- **Documentation**: Check [User Guide](user-guide.md) and [Commands](commands.md)
+- **Examples**: Review CSV format in [CSV Format Guide](csv-format.md)
+- **Development**: See [Development Guide](development.md) for contributing
+
+### Reset Everything
+
+If all else fails, complete reset:
+
+```bash
+# Backup current data
+cp clab_topology.db clab_topology.db.backup
+cp config.yaml config.yaml.backup
+
+# Clean slate
+rm clab_topology.db config.local.yaml
+./clab-tools.sh db init
+cp config.local.example.yaml config.local.yaml
+
+# Reimport data
+./clab-tools.sh import-csv nodes.csv connections.csv
+```
 ```
 
 **Solution**:

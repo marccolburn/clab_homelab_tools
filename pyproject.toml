@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "clab-homelab-tools"
-version = "0.1.0"
+dynamic = ["version"]
 description = "A comprehensive CLI tool for managing containerlab network topologies with persistent storage"
 readme = "README.md"
 license = {file = "LICENSE"}
@@ -80,3 +80,6 @@ addopts = [
     "--cov-report=term-missing",
     "--cov-report=html",
 ]
+
+[tool.setuptools.dynamic]
+version = {attr = "clab_tools.__version__"}

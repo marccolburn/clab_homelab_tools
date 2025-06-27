@@ -24,6 +24,13 @@ topology:
   template_path: "topology_template.j2"  # Path to Jinja2 template
   output_dir: "."                  # Output directory for generated files
 
+# Lab management settings
+lab:
+  current_lab: "default"
+  use_global_database: false
+  global_database_path: null
+  auto_create_lab: true
+
 # Bridge management settings
 bridges:
   bridge_prefix: "clab-br"         # Prefix for created bridges

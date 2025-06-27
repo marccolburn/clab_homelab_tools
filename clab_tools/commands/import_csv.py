@@ -1,13 +1,14 @@
 """
 Import CSV Command
 
-Handles importing node and connection data from CSV files into the database.
+Handles importing node and connection data from CSV files into the current lab.
 """
 
 import csv
 
 import click
 
+from ..db.context import get_lab_db
 from ..errors.exceptions import CSVImportError
 from ..errors.handlers import (
     safe_operation,
@@ -17,15 +18,16 @@ from ..errors.handlers import (
 from ..log_config.logger import get_logger
 
 
-def import_csv_command(db_manager, nodes_csv, connections_csv, clear_existing):
+def import_csv_command(db, nodes_csv, connections_csv, clear_existing, current_lab):
     """
-    Import node and connection data from CSV files into the database.
+    Import node and connection data from CSV files into the current lab.
 
     Args:
-        db_manager: Database manager instance
+        db: Lab-aware database wrapper
         nodes_csv: Path to nodes CSV file
         connections_csv: Path to connections CSV file
         clear_existing: Whether to clear existing data before import
+        current_lab: Current lab name for display
 
     Raises:
         CSVImportError: If files are missing or have invalid format
@@ -33,16 +35,16 @@ def import_csv_command(db_manager, nodes_csv, connections_csv, clear_existing):
     logger = get_logger(__name__)
 
     with safe_operation("CSV Import", logger):
-        click.echo("=== CSV Import ===")
+        click.echo(f"=== CSV Import to Lab '{current_lab}' ===")
 
         # Validate files exist
         validate_file_exists(nodes_csv)
         validate_file_exists(connections_csv)
 
         if clear_existing:
-            click.echo("Clearing existing data...")
-            db_manager.clear_connections()
-            db_manager.clear_nodes()
+            click.echo(f"Clearing existing data from lab '{current_lab}'...")
+            db.clear_connections()
+            db.clear_nodes()
 
         # Import nodes
         node_count = 0
@@ -79,7 +81,7 @@ def import_csv_command(db_manager, nodes_csv, connections_csv, clear_existing):
                             row_number=row_num,
                         )
 
-                    if db_manager.insert_node(name, kind, mgmt_ip):
+                    if db.insert_node(name, kind, mgmt_ip):
                         node_count += 1
 
             click.echo(f"✓ Imported {node_count} nodes from {nodes_csv}")
@@ -120,7 +122,7 @@ def import_csv_command(db_manager, nodes_csv, connections_csv, clear_existing):
                             row_number=row_num,
                         )
 
-                    if db_manager.insert_connection(
+                    if db.insert_connection(
                         node1, node2, conn_type, node1_interface, node2_interface
                     ):
                         connection_count += 1
@@ -132,7 +134,7 @@ def import_csv_command(db_manager, nodes_csv, connections_csv, clear_existing):
         except csv.Error as e:
             raise CSVImportError(f"CSV parsing error: {e}", file_path=connections_csv)
 
-        click.echo("=== Import Complete ===")
+        click.echo(f"=== Import Complete - Lab '{current_lab}' ===")
 
 
 @click.command()
@@ -151,11 +153,12 @@ def import_csv_command(db_manager, nodes_csv, connections_csv, clear_existing):
 @click.pass_context
 def import_csv(ctx, nodes_csv, connections_csv, clear_existing):
     """
-    Import node and connection data from CSV files into the database.
+    Import node and connection data from CSV files into the current lab.
 
     CSV file formats:
     - Nodes: node_name, kind, mgmt_ip
     - Connections: node1, node2, type, node1_interface, node2_interface
     """
-    db_manager = ctx.obj["db_manager"]
-    import_csv_command(db_manager, nodes_csv, connections_csv, clear_existing)
+    db = get_lab_db(ctx.obj)
+    current_lab = ctx.obj["current_lab"]
+    import_csv_command(db, nodes_csv, connections_csv, clear_existing, current_lab)
