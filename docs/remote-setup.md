@@ -135,10 +135,10 @@ clab-tools --enable-remote remote execute "clab version"
 
 ```bash
 # Generate and upload topology
-clab-tools generate-topology --upload --enable-remote -o lab.yml
+clab-tools topology generate --upload --enable-remote -o lab.yml
 
 # Create bridges on remote host
-clab-tools --enable-remote create-bridges
+clab-tools --enable-remote bridge create
 
 # Deploy topology
 clab-tools --enable-remote remote execute "sudo clab deploy -t /tmp/clab-topologies/lab.yml"
@@ -148,7 +148,7 @@ clab-tools --enable-remote remote execute "clab inspect"
 
 # Cleanup
 clab-tools --enable-remote remote execute "sudo clab destroy -t /tmp/clab-topologies/lab.yml"
-clab-tools --enable-remote delete-bridges
+clab-tools --enable-remote bridge cleanup
 ```
 
 ### File Management

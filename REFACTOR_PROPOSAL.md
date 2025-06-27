@@ -227,8 +227,8 @@ clab-tools lab create $LAB_NAME || clab-tools lab switch $LAB_NAME
 # 2. Import topology data
 echo "→ Importing topology data..."
 clab-tools data import \
-    --nodes-csv nodes.csv \
-    --connections-csv connections.csv
+    -n nodes.csv \
+    -c connections.csv
 
 # 3. Show imported data for verification
 echo "→ Verifying imported data..."

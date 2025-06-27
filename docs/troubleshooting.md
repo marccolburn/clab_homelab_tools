@@ -10,10 +10,10 @@ Common issues and solutions for clab-tools.
 ./clab-tools.sh --help
 
 # Test database
-./clab-tools.sh show-data
+./clab-tools.sh data show
 
 # Test configuration
-./clab-tools.sh config show
+./clab-tools.sh remote show-config
 
 # Enable debug mode
 ./clab-tools.sh --debug --verbose [command]
@@ -77,15 +77,12 @@ rm clab_topology.db
 
 **Solutions**:
 ```bash
-# Validate CSV format
-./clab-tools.sh import-csv --validate nodes.csv
-
-# Check CSV headers
+# Validate CSV format first
 head -1 nodes.csv
 
 # Clear and re-import
-./clab-tools.sh clear-data
-./clab-tools.sh import-csv nodes.csv connections.csv
+./clab-tools.sh data clear
+./clab-tools.sh data import -n nodes.csv -c connections.csv
 ```
 
 ## Bridge and Network Issues
@@ -279,16 +276,13 @@ export CLAB_LOG_LEVEL=DEBUG
 
 ```bash
 # Show all data
-./clab-tools.sh show-data --verbose
+./clab-tools.sh data show
 
-# Test configuration
-./clab-tools.sh config validate --debug
+# Test remote connection
+./clab-tools.sh remote test-connection
 
-# Check database schema
-./clab-tools.sh db info --verbose
-
-# Test remote connections
-./clab-tools.sh remote test-all --debug
+# Show remote configuration
+./clab-tools.sh remote show-config
 ```
 
 ## Getting Help
@@ -332,7 +326,7 @@ rm clab_topology.db config.local.yaml
 cp config.local.example.yaml config.local.yaml
 
 # Reimport data
-./clab-tools.sh import-csv nodes.csv connections.csv
+./clab-tools.sh data import -n nodes.csv -c connections.csv
 ```
 ```
 
@@ -358,17 +352,17 @@ pip install -r requirements.txt
 #### Permission Issues
 **Problem**: Permission denied errors
 ```bash
-$ python main.py create-bridges
+$ python main.py bridge create
 Permission denied: bridge creation requires root privileges
 ```
 
 **Solution**:
 ```bash
 # Use sudo for bridge operations
-sudo python main.py create-bridges
+sudo python main.py bridge create
 
 # Or run with virtual environment
-sudo .venv/bin/python main.py create-bridges
+sudo .venv/bin/python main.py bridge create
 
 # Check file permissions
 ls -la clab-tools.sh
@@ -380,14 +374,14 @@ chmod +x clab-tools.sh
 #### Configuration File Not Found
 **Problem**: Configuration file not loaded
 ```bash
-$ python main.py --config myconfig.yaml show-data
+$ python main.py --config myconfig.yaml data show
 ✗ Error: Configuration file not found: myconfig.yaml
 ```
 
 **Solution**:
 ```bash
 # Use absolute path
-python main.py --config /full/path/to/myconfig.yaml show-data
+python main.py --config /full/path/to/myconfig.yaml data show
 
 # Check current directory
 ls -la *.yaml
@@ -427,7 +421,7 @@ except Exception as e:
 **Problem**: Environment variables not recognized
 ```bash
 $ export CLAB_DATABASE_URL="sqlite:///test.db"
-$ python main.py show-data
+$ python main.py data show
 # Still using default database
 ```
 
@@ -461,7 +455,7 @@ print('CLAB_DATABASE_URL:', os.getenv('CLAB_DATABASE_URL'))
 ls -la clab_topology.db
 
 # Try different database
-python main.py --db-url "sqlite:///temp.db" show-data
+python main.py --db-url "sqlite:///temp.db" data show
 
 # Check for lock files
 ls -la *.db-*
@@ -470,7 +464,7 @@ ls -la *.db-*
 rm -f clab_topology.db-wal clab_topology.db-shm
 
 # Test with in-memory database
-python main.py --db-url "sqlite:///:memory:" show-data
+python main.py --db-url "sqlite:///:memory:" data show
 ```
 
 #### Database Schema Issues
@@ -482,11 +476,11 @@ python main.py --db-url "sqlite:///:memory:" show-data
 **Solution**:
 ```bash
 # Let the application create tables automatically
-python main.py show-data
+python main.py data show
 
 # Or manually recreate database
 rm -f clab_topology.db
-python main.py show-data
+python main.py data show
 
 # Check database schema
 sqlite3 clab_topology.db ".schema"
@@ -513,7 +507,7 @@ psql -h database-host -U username -d database
 export CLAB_DATABASE_URL="postgresql://user:pass@host:5432/dbname"
 
 # Enable connection debugging
-python main.py --debug --db-url "postgresql://user:pass@host/db" show-data
+python main.py --debug --db-url "postgresql://user:pass@host/db" data show
 ```
 
 ### CSV Import Issues
@@ -530,7 +524,7 @@ python main.py --debug --db-url "postgresql://user:pass@host/db" show-data
 ls -la nodes.csv connections.csv
 
 # Use absolute paths
-python main.py import-csv -n /full/path/to/nodes.csv -c /full/path/to/connections.csv
+python main.py data import -n /full/path/to/nodes.csv -c /full/path/to/connections.csv
 
 # Check current directory
 pwd
@@ -569,7 +563,7 @@ iconv -f UTF-8-BOM -t UTF-8 nodes.csv > nodes_clean.csv
 **Solution**:
 ```bash
 # Enable debug mode for detailed errors
-python main.py --debug import-csv -n nodes.csv -c connections.csv
+python main.py --debug data import -n nodes.csv -c connections.csv
 
 # Validate CSV data manually
 python -c "
@@ -608,7 +602,7 @@ cp topology_template.j2 topology_template.j2.backup
 git checkout topology_template.j2
 
 # Debug template variables
-python main.py --debug generate-topology -o test.yml
+python main.py --debug topology generate -o test.yml
 ```
 
 #### YAML Validation Errors
@@ -620,7 +614,7 @@ python main.py --debug generate-topology -o test.yml
 **Solution**:
 ```bash
 # Generate without validation
-python main.py generate-topology -o test.yml
+python main.py topology generate -o test.yml
 
 # Check YAML syntax
 python -c "
@@ -659,7 +653,7 @@ sudo ip link add test-br type bridge
 sudo ip link delete test-br
 
 # Use dry-run mode for debugging
-python main.py create-bridges --dry-run
+python main.py bridge create --dry-run
 ```
 
 #### Bridge Cleanup Issues
@@ -718,14 +712,14 @@ mkdir -p logs
 **Solution**:
 ```bash
 # Check log format setting
-python main.py --log-format console show-data
+python main.py --log-format console data show
 
 # Verify configuration
 grep -A 5 "logging:" config.yaml
 
 # Test different formats
-python main.py --log-format json show-data
-python main.py --log-format console show-data
+python main.py --log-format json data show
+python main.py --log-format console data show
 ```
 
 ## Performance Issues
@@ -739,7 +733,7 @@ python main.py --log-format console show-data
 **Solution**:
 ```bash
 # Enable debug mode to see progress
-python main.py --debug import-csv -n large_nodes.csv -c large_connections.csv
+python main.py --debug data import -n large_nodes.csv -c large_connections.csv
 
 # Check file sizes
 wc -l *.csv
@@ -763,7 +757,7 @@ MemoryError: Unable to allocate array
 **Solution**:
 ```bash
 # Monitor memory usage
-python main.py --debug import-csv -n nodes.csv -c connections.csv &
+python main.py --debug data import -n nodes.csv -c connections.csv &
 top -p $!
 
 # Use streaming processing for large files
@@ -802,10 +796,10 @@ export CLAB_DATABASE_URL="postgresql://user:pass@localhost/clab"
 ### Debug Mode Analysis
 ```bash
 # Enable comprehensive debugging
-python main.py --debug --log-level DEBUG --log-format json import-csv -n nodes.csv -c connections.csv
+python main.py --debug --log-level DEBUG --log-format json data import -n nodes.csv -c connections.csv
 
 # Save debug output
-python main.py --debug show-data 2>&1 | tee debug.log
+python main.py --debug data show 2>&1 | tee debug.log
 
 # Analyze debug output
 grep "ERROR" debug.log
@@ -848,16 +842,16 @@ chmod +x debug_info.sh
 ### Log Analysis Tools
 ```bash
 # Analyze JSON logs
-python main.py --log-format json show-data | jq '.'
+python main.py --log-format json data show | jq '.'
 
 # Filter specific log levels
-python main.py --debug show-data 2>&1 | grep "ERROR"
+python main.py --debug data show 2>&1 | grep "ERROR"
 
 # Extract timing information
-python main.py --debug show-data 2>&1 | grep "duration"
+python main.py --debug data show 2>&1 | grep "duration"
 
 # Count log entries by level
-python main.py --debug show-data 2>&1 | grep -o '"level":"[^"]*"' | sort | uniq -c
+python main.py --debug data show 2>&1 | grep -o '"level":"[^"]*"' | sort | uniq -c
 ```
 
 ## Getting Help

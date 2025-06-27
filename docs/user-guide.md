@@ -104,11 +104,11 @@ spine1,eth2,leaf2,eth1,br-fabric
 # Import data
 clab-tools data import nodes.csv connections.csv
 
-# Export current data
-./clab-tools.sh export-csv --output exported-
+# Import data with proper flags
+clab-tools data import -n nodes.csv -c connections.csv
 
-# Validate before import
-clab-tools data import --validate nodes.csv
+# Check imported data
+clab-tools data show
 ```
 
 ## Bridge Management
@@ -205,11 +205,12 @@ remote_hosts:
 # Clear all data
 clab-tools data clear
 
-# Update nodes from CSV
-./clab-tools.sh update-nodes nodes-updated.csv
+# Re-import updated data
+./clab-tools.sh data clear
+./clab-tools.sh data import -n nodes-updated.csv -c connections.csv
 
-# Batch bridge creation
-sudo ./clab-tools.sh bridge create-batch bridges.yaml
+# Manual bridge creation with custom options
+sudo ./clab-tools.sh bridge create-bridge br-custom --interface eth0
 ```
 
 ### Scripting and Automation

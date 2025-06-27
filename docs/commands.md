@@ -335,18 +335,18 @@ clab-tools --enable-remote remote upload-topology my-lab.yml
 
 ```bash
 # Work with specific lab without switching
-clab-tools --lab production show-data
-clab-tools --lab staging import-csv -n staging.csv -c connections.csv
+clab-tools --lab production data show
+clab-tools --lab staging data import -n staging.csv -c connections.csv
 
 # Multiple overrides
-clab-tools --config custom.yaml --lab special-env --debug generate-topology -o lab.yml
+clab-tools --config custom.yaml --lab special-env --debug topology generate -o lab.yml
 ```
 
 ### Remote Host Operations
 
 ```bash
 # Using CLI flags for remote operations
-clab-tools --remote-host 10.1.1.100 --remote-user admin --enable-remote create-bridges
+clab-tools --remote-host 10.1.1.100 --remote-user admin --enable-remote bridge create
 
 # Override remote credentials
 clab-tools --remote-host 192.168.1.50 --remote-user clab --remote-password secret --enable-remote remote test-connection
@@ -356,18 +356,18 @@ clab-tools --remote-host 192.168.1.50 --remote-user clab --remote-password secre
 
 ```bash
 # Use different database
-clab-tools --db-url sqlite:///backup.db show-data
+clab-tools --db-url sqlite:///backup.db data show
 
 # Temporary database for testing
-clab-tools --db-url sqlite:///test.db import-csv -n test-nodes.csv -c test-connections.csv
+clab-tools --db-url sqlite:///test.db data import -n test-nodes.csv -c test-connections.csv
 ```
 
 ### Debug Mode
 
 ```bash
 # Enable debug logging
-clab-tools --debug --log-level DEBUG generate-topology -o lab.yml
+clab-tools --debug --log-level DEBUG topology generate -o lab.yml
 
 # JSON logging format
-clab-tools --log-format json --log-level INFO create-bridges
+clab-tools --log-format json --log-level INFO bridge create
 ```
