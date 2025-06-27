@@ -59,6 +59,9 @@ class TopologySettings(BaseSettings):
     """Topology generation settings."""
 
     default_prefix: str = Field(default="clab", description="Default topology prefix")
+    default_topology_name: str = Field(
+        default="generated_lab", description="Default topology name"
+    )
     default_mgmt_network: str = Field(
         default="clab", description="Default management network"
     )

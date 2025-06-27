@@ -18,6 +18,7 @@ logging:
 # Topology generation settings
 topology:
   default_prefix: "clab"           # Default topology prefix
+  default_topology_name: "homelab" # Default topology name
   default_mgmt_network: "clab"     # Default management network name
   default_mgmt_subnet: "172.20.20.0/24"  # Default management subnet
   template_path: "topology_template.j2"  # Path to Jinja2 template
