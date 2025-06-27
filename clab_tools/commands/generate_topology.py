@@ -84,13 +84,23 @@ def generate_topology_command(
 
     # Generate topology using lab-specific data
     # We need to temporarily override the generator's database calls
-    # with lab-specific data
+    # with lab-specific data - but avoid circular dependencies by
+    # caching the data first
     original_get_all_nodes = raw_db_manager.get_all_nodes
     original_get_all_connections = raw_db_manager.get_all_connections
+    original_save_topology_config = raw_db_manager.save_topology_config
 
-    # Override with lab-specific methods
-    raw_db_manager.get_all_nodes = lambda: db.get_all_nodes()
-    raw_db_manager.get_all_connections = lambda: db.get_all_connections()
+    # Cache the lab-specific data to avoid circular dependencies
+    cached_nodes = nodes  # We already fetched this above
+    cached_connections = connections  # We already fetched this above
+
+    # Override with lab-specific data (not methods)
+    raw_db_manager.get_all_nodes = lambda lab_name=None: cached_nodes
+    raw_db_manager.get_all_connections = lambda lab_name=None: cached_connections
+    # Override save_topology_config to automatically provide current lab name
+    raw_db_manager.save_topology_config = lambda name, prefix, mgmt_network, mgmt_subnet: original_save_topology_config(  # noqa: E501
+        name, prefix, mgmt_network, mgmt_subnet, current_lab
+    )
 
     try:
         success = generator.generate_topology_file(
@@ -104,6 +114,7 @@ def generate_topology_command(
         # Restore original methods
         raw_db_manager.get_all_nodes = original_get_all_nodes
         raw_db_manager.get_all_connections = original_get_all_connections
+        raw_db_manager.save_topology_config = original_save_topology_config
 
     if not success:
         sys.exit(1)
@@ -115,6 +126,7 @@ def generate_topology_command(
             click.echo(f"✓ {message}")
         else:
             click.echo(f"✗ {message}", err=True)
+            sys.exit(1)
 
     # Upload to remote host if requested
     if upload_remote:
@@ -133,12 +145,12 @@ def generate_topology_command(
             )
             sys.exit(1)
 
-    # Calculate summary
-    _, links, bridges = generator.generate_topology_data()
+    # Calculate summary using cached data (already fetched above)
+    bridges = [node for node in nodes if "bridge" in node[1].lower()]
     click.echo(f"\n=== Generation Complete - Lab '{current_lab}' ===")
     click.echo("Summary:")
     click.echo(f"  - Nodes: {len(nodes)} ({len(bridges)} bridges)")
-    click.echo(f"  - Links: {len(links)}")
+    click.echo(f"  - Links: {len(connections)}")
     if upload_remote:
         click.echo("  - Remote upload: ✓")
 

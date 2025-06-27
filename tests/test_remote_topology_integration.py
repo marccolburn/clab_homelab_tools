@@ -253,20 +253,21 @@ class TestTopologyGenerationWithRemote:
         mock_generator.validate_yaml.return_value = (False, "Invalid YAML")
         mock_generator.generate_topology_data.return_value = ([], [], [])
 
-        # Should not raise SystemExit, just log the validation error
-        generate_topology_command(
-            db=self.mock_lab_db,
-            output="test.yml",
-            topology_name="test",
-            prefix="test",
-            mgmt_network="mgmt",
-            mgmt_subnet="192.168.1.0/24",
-            template="template.j2",
-            kinds_config="kinds.yml",
-            validate=True,
-            current_lab="testlab",
-            upload_remote=False,
-        )
+        # Should raise SystemExit when validation fails
+        with pytest.raises(SystemExit):
+            generate_topology_command(
+                db=self.mock_lab_db,
+                output="test.yml",
+                topology_name="test",
+                prefix="test",
+                mgmt_network="mgmt",
+                mgmt_subnet="192.168.1.0/24",
+                template="template.j2",
+                kinds_config="kinds.yml",
+                validate=True,
+                current_lab="testlab",
+                upload_remote=False,
+            )
 
         # Verify validation was called
         mock_generator.validate_yaml.assert_called_with("test.yml")
