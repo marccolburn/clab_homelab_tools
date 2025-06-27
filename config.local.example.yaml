@@ -27,6 +27,11 @@ bridges:
 # General settings
 debug: true                            # Enable debug mode for development
 
+# Lab settings - customize for your lab workflow
+lab:
+  current_lab: "dev"                   # Default lab for development
+  auto_create_lab: true                # Automatically create lab if it doesn't exist
+
 # Example: Override specific settings for different use cases
 #
 # For PostgreSQL database:

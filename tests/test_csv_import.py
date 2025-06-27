@@ -10,16 +10,16 @@ class TestCSVImport:
     """Integration tests for CSV import."""
 
     def test_successful_csv_import(
-        self, db_manager, sample_nodes_csv, sample_connections_csv
+        self, lab_aware_db, sample_nodes_csv, sample_connections_csv
     ):
         """Test successful import of valid CSV files."""
         # Import CSV data
         import_csv_command(
-            db_manager, sample_nodes_csv, sample_connections_csv, clear_existing=True
+            lab_aware_db, sample_nodes_csv, sample_connections_csv, True, "testlab"
         )
 
         # Verify nodes were imported
-        nodes = db_manager.get_all_nodes()
+        nodes = lab_aware_db.get_all_nodes()
         assert len(nodes) == 3
         node_names = [node[0] for node in nodes]
         assert "router1" in node_names
@@ -27,7 +27,7 @@ class TestCSVImport:
         assert "switch1" in node_names
 
         # Verify connections were imported
-        connections = db_manager.get_all_connections()
+        connections = lab_aware_db.get_all_connections()
         assert len(connections) == 3
 
         # Verify specific connection exists
@@ -59,25 +59,25 @@ class TestCSVImport:
             )
 
     def test_import_without_clearing(
-        self, db_manager, sample_nodes_csv, sample_connections_csv
+        self, lab_aware_db, sample_nodes_csv, sample_connections_csv
     ):
         """Test importing without clearing existing data."""
         # First import
         import_csv_command(
-            db_manager, sample_nodes_csv, sample_connections_csv, clear_existing=True
+            lab_aware_db, sample_nodes_csv, sample_connections_csv, True, "testlab"
         )
-        initial_node_count = len(db_manager.get_all_nodes())
+        initial_node_count = len(lab_aware_db.get_all_nodes())
 
         # Second import without clearing - should update existing nodes
         import_csv_command(
-            db_manager, sample_nodes_csv, sample_connections_csv, clear_existing=False
+            lab_aware_db, sample_nodes_csv, sample_connections_csv, False, "testlab"
         )
-        final_node_count = len(db_manager.get_all_nodes())
+        final_node_count = len(lab_aware_db.get_all_nodes())
 
         # Node count should be the same (updated, not duplicated)
         assert final_node_count == initial_node_count
 
-    def test_bridge_nodes_without_mgmt_ip(self, db_manager, temp_dir):
+    def test_bridge_nodes_without_mgmt_ip(self, lab_aware_db, temp_dir):
         """Test importing bridge nodes without management IP."""
         # Create CSV with bridge nodes having empty mgmt_ip
         nodes_csv_content = """node_name,kind,mgmt_ip
@@ -96,20 +96,20 @@ router1,br-main,veth,eth1,eth1
 
         # Import should succeed
         import_csv_command(
-            db_manager, str(nodes_csv), str(connections_csv), clear_existing=True
+            lab_aware_db, str(nodes_csv), str(connections_csv), True, "testlab"
         )
 
         # Verify nodes were imported correctly
-        nodes = db_manager.get_all_nodes()
+        nodes = lab_aware_db.get_all_nodes()
         assert len(nodes) == 3
 
         # Check bridge nodes have N/A for mgmt_ip
-        bridge_nodes = db_manager.get_nodes_by_kind("bridge")
+        bridge_nodes = lab_aware_db.get_nodes_by_kind("bridge")
         assert len(bridge_nodes) == 2
         for bridge in bridge_nodes:
             assert bridge.mgmt_ip == "N/A"
 
-    def test_non_bridge_nodes_require_mgmt_ip(self, db_manager, temp_dir):
+    def test_non_bridge_nodes_require_mgmt_ip(self, lab_aware_db, temp_dir):
         """Test that non-bridge nodes still require mgmt_ip."""
         # Create CSV with non-bridge node missing mgmt_ip
         nodes_csv_content = """node_name,kind,mgmt_ip
@@ -130,10 +130,10 @@ router1,router2,veth,eth1,eth1
             CSVImportError, match="mgmt_ip is required for non-bridge nodes"
         ):
             import_csv_command(
-                db_manager, str(nodes_csv), str(connections_csv), clear_existing=True
+                lab_aware_db, str(nodes_csv), str(connections_csv), True, "testlab"
             )
 
-    def test_nodes_missing_required_fields(self, db_manager, temp_dir):
+    def test_nodes_missing_required_fields(self, lab_aware_db, temp_dir):
         """Test that nodes with missing name or kind fail import."""
         # Create CSV with missing required fields
         nodes_csv_content = """node_name,kind,mgmt_ip
@@ -152,5 +152,5 @@ router1,router2,veth,eth1,eth1
         # Import should fail due to missing required fields
         with pytest.raises(CSVImportError, match="node_name and kind are required"):
             import_csv_command(
-                db_manager, str(nodes_csv), str(connections_csv), clear_existing=True
+                lab_aware_db, str(nodes_csv), str(connections_csv), True, "testlab"
             )

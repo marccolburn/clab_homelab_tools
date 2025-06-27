@@ -2,33 +2,37 @@
 Bridge Commands
 
 Handles creating and managing Linux bridges on the host system or remote hosts.
+Multi-lab aware implementation.
 """
 
 import click
 
 from ..bridges.manager import BridgeManager
+from ..db.context import LabAwareDB
 from ..remote import get_remote_host_manager
 
 
-def create_bridges_command(db_manager, dry_run, force):
+def create_bridges_command(db_manager, lab_name, dry_run, force):
     """
     Create Linux bridges on the host system based on database connections.
 
     Args:
         db_manager: Database manager instance
+        lab_name: Name of the lab context
         dry_run: Whether to show what would be done without making changes
         force: Whether to proceed without confirmation prompts
     """
     # Get remote host manager if configured
     remote_manager = get_remote_host_manager()
 
-    if remote_manager:
-        with remote_manager:
-            bridge_manager = BridgeManager(db_manager, remote_manager)
-            _execute_bridge_creation(bridge_manager, dry_run, force, remote=True)
-    else:
-        bridge_manager = BridgeManager(db_manager)
-        _execute_bridge_creation(bridge_manager, dry_run, force, remote=False)
+    with LabAwareDB(db_manager, lab_name) as lab_db:
+        if remote_manager:
+            with remote_manager:
+                bridge_manager = BridgeManager(lab_db, remote_manager)
+                _execute_bridge_creation(bridge_manager, dry_run, force, remote=True)
+        else:
+            bridge_manager = BridgeManager(lab_db)
+            _execute_bridge_creation(bridge_manager, dry_run, force, remote=False)
 
 
 def _execute_bridge_creation(bridge_manager, dry_run, force, remote=False):
@@ -74,25 +78,27 @@ def _execute_bridge_creation(bridge_manager, dry_run, force, remote=False):
         click.echo(f"✗ {message}")
 
 
-def delete_bridges_command(db_manager, dry_run, force):
+def delete_bridges_command(db_manager, lab_name, dry_run, force):
     """
     Delete Linux bridges from the system.
 
     Args:
         db_manager: Database manager instance
+        lab_name: Name of the lab context
         dry_run: Whether to show what would be done without making changes
         force: Whether to proceed without confirmation prompts
     """
     # Get remote host manager if configured
     remote_manager = get_remote_host_manager()
 
-    if remote_manager:
-        with remote_manager:
-            bridge_manager = BridgeManager(db_manager, remote_manager)
-            _execute_bridge_deletion(bridge_manager, dry_run, force, remote=True)
-    else:
-        bridge_manager = BridgeManager(db_manager)
-        _execute_bridge_deletion(bridge_manager, dry_run, force, remote=False)
+    with LabAwareDB(db_manager, lab_name) as lab_db:
+        if remote_manager:
+            with remote_manager:
+                bridge_manager = BridgeManager(lab_db, remote_manager)
+                _execute_bridge_deletion(bridge_manager, dry_run, force, remote=True)
+        else:
+            bridge_manager = BridgeManager(lab_db)
+            _execute_bridge_deletion(bridge_manager, dry_run, force, remote=False)
 
 
 def _execute_bridge_deletion(bridge_manager, dry_run, force, remote=False):
@@ -127,23 +133,25 @@ def _execute_bridge_deletion(bridge_manager, dry_run, force, remote=False):
         click.echo(f"✗ {message}")
 
 
-def list_bridges_command(db_manager):
+def list_bridges_command(db_manager, lab_name):
     """
     List bridge status on the system.
 
     Args:
         db_manager: Database manager instance
+        lab_name: Name of the lab context
     """
     # Get remote host manager if configured
     remote_manager = get_remote_host_manager()
 
-    if remote_manager:
-        with remote_manager:
-            bridge_manager = BridgeManager(db_manager, remote_manager)
-            _execute_bridge_listing(bridge_manager, remote=True)
-    else:
-        bridge_manager = BridgeManager(db_manager)
-        _execute_bridge_listing(bridge_manager, remote=False)
+    with LabAwareDB(db_manager, lab_name) as lab_db:
+        if remote_manager:
+            with remote_manager:
+                bridge_manager = BridgeManager(lab_db, remote_manager)
+                _execute_bridge_listing(bridge_manager, remote=True)
+        else:
+            bridge_manager = BridgeManager(lab_db)
+            _execute_bridge_listing(bridge_manager, remote=False)
 
 
 def _execute_bridge_listing(bridge_manager, remote=False):
@@ -180,27 +188,31 @@ def _execute_bridge_listing(bridge_manager, remote=False):
         click.echo("\n✓ All required bridges exist on {}".format(location))
 
 
-def configure_vlans_command(db_manager, bridge_name, dry_run):
+def configure_vlans_command(db_manager, lab_name, bridge_name, dry_run):
     """
     Configure VLANs on bridge interfaces.
 
     Args:
         db_manager: Database manager instance
+        lab_name: Name of the lab context
         bridge_name: Name of the bridge to configure VLANs on (or None for all bridges)
         dry_run: Whether to show what would be done without making changes
     """
     # Get remote host manager if configured
     remote_manager = get_remote_host_manager()
 
-    if remote_manager:
-        with remote_manager:
-            bridge_manager = BridgeManager(db_manager, remote_manager)
+    with LabAwareDB(db_manager, lab_name) as lab_db:
+        if remote_manager:
+            with remote_manager:
+                bridge_manager = BridgeManager(lab_db, remote_manager)
+                _execute_vlan_configuration(
+                    bridge_manager, bridge_name, dry_run, remote=True
+                )
+        else:
+            bridge_manager = BridgeManager(lab_db)
             _execute_vlan_configuration(
-                bridge_manager, bridge_name, dry_run, remote=True
+                bridge_manager, bridge_name, dry_run, remote=False
             )
-    else:
-        bridge_manager = BridgeManager(db_manager)
-        _execute_vlan_configuration(bridge_manager, bridge_name, dry_run, remote=False)
 
 
 def _execute_vlan_configuration(bridge_manager, bridge_name, dry_run, remote=False):
@@ -264,7 +276,8 @@ def create_bridges(ctx, dry_run, force):
     Supports both local and remote host operations.
     """
     db_manager = ctx.obj["db_manager"]
-    create_bridges_command(db_manager, dry_run, force)
+    lab_name = ctx.obj["lab_name"]
+    create_bridges_command(db_manager, lab_name, dry_run, force)
 
 
 @click.command()
@@ -282,7 +295,8 @@ def delete_bridges(ctx, dry_run, force):
     Supports both local and remote host operations.
     """
     db_manager = ctx.obj["db_manager"]
-    delete_bridges_command(db_manager, dry_run, force)
+    lab_name = ctx.obj["lab_name"]
+    delete_bridges_command(db_manager, lab_name, dry_run, force)
 
 
 @click.command()
@@ -296,7 +310,8 @@ def list_bridges(ctx):
     Supports both local and remote host operations.
     """
     db_manager = ctx.obj["db_manager"]
-    list_bridges_command(db_manager)
+    lab_name = ctx.obj["lab_name"]
+    list_bridges_command(db_manager, lab_name)
 
 
 @click.command()
@@ -323,7 +338,8 @@ def configure_vlans(ctx, bridge, dry_run):
     Supports both local and remote host operations.
     """
     db_manager = ctx.obj["db_manager"]
-    configure_vlans_command(db_manager, bridge, dry_run)
+    lab_name = ctx.obj["lab_name"]
+    configure_vlans_command(db_manager, lab_name, bridge, dry_run)
 
 
 # Legacy command names for backward compatibility

@@ -1,23 +1,29 @@
 """
 Data Management Commands
 
-Handles displaying and managing data stored in the database.
+Handles displaying and managing data stored in the database with multi-lab support.
 """
 
 import click
 
+from ..db.context import get_lab_db
 
-def show_data_command(db_manager):
-    """
-    Display current data stored in the database.
 
-    Args:
-        db_manager: Database manager instance
+@click.command()
+@click.pass_context
+def show_data(ctx):
     """
-    click.echo("=== Database Contents ===")
+    Display current data stored in the current lab.
+
+    Shows all nodes, connections, and topology configurations stored in the current lab.
+    """
+    db = get_lab_db(ctx.obj)
+    current_lab = ctx.obj["current_lab"]
+
+    click.echo(f"=== Lab '{current_lab}' Contents ===")
 
     # Show nodes
-    nodes = db_manager.get_all_nodes()
+    nodes = db.get_all_nodes()
     click.echo(f"\nNodes ({len(nodes)}):")
     if nodes:
         click.echo("  Name               Kind                   Management IP")
@@ -28,7 +34,7 @@ def show_data_command(db_manager):
         click.echo("  No nodes found")
 
     # Show connections
-    connections = db_manager.get_all_connections()
+    connections = db.get_all_connections()
     click.echo(f"\nConnections ({len(connections)}):")
     if connections:
         click.echo("  Node1 -> Node2         Type     Interface1       Interface2")
@@ -39,46 +45,28 @@ def show_data_command(db_manager):
         click.echo("  No connections found")
 
 
-def clear_data_command(db_manager, force):
-    """
-    Clear all data from the database.
-
-    Args:
-        db_manager: Database manager instance
-        force: Whether to proceed without confirmation
-    """
-    if not force:
-        if not click.confirm("This will clear ALL data from the database. Continue?"):
-            click.echo("Aborted.")
-            return
-
-    click.echo("Clearing database...")
-    db_manager.clear_connections()
-    db_manager.clear_nodes()
-
-    click.echo("✓ Database cleared successfully")
-
-
-@click.command()
-@click.pass_context
-def show_data(ctx):
-    """
-    Display current data stored in the database.
-
-    Shows all nodes, connections, and topology configurations stored in the database.
-    """
-    db_manager = ctx.obj["db_manager"]
-    show_data_command(db_manager)
-
-
 @click.command()
 @click.option("--force", is_flag=True, help="Proceed without confirmation")
 @click.pass_context
 def clear_data(ctx, force):
     """
-    Clear all data from the database.
+    Clear all data from the current lab.
 
-    This will remove all nodes, connections, and topology configurations.
+    This will remove all nodes, connections, and topology configurations
+    from the current lab only.
     """
-    db_manager = ctx.obj["db_manager"]
-    clear_data_command(db_manager, force)
+    db = get_lab_db(ctx.obj)
+    current_lab = ctx.obj["current_lab"]
+
+    if not force:
+        if not click.confirm(
+            f"This will clear ALL data from lab '{current_lab}'. Continue?"
+        ):
+            click.echo("Aborted.")
+            return
+
+    click.echo(f"Clearing data from lab '{current_lab}'...")
+    db.clear_connections()
+    db.clear_nodes()
+
+    click.echo(f"✓ Lab '{current_lab}' cleared successfully")

@@ -16,12 +16,12 @@ class TestGenerateTopologyCommand:
 
     def setup_method(self):
         """Set up test fixtures."""
-        self.mock_db = Mock()
-        self.mock_db.get_all_nodes.return_value = [
+        self.mock_lab_db = Mock()
+        self.mock_lab_db.get_all_nodes.return_value = [
             ("router1", "linux", "192.168.1.1"),
             ("switch1", "bridge", None),
         ]
-        self.mock_db.get_all_connections.return_value = [
+        self.mock_lab_db.get_all_connections.return_value = [
             ("router1", "eth0", "switch1", "eth1"),
         ]
 
@@ -46,7 +46,7 @@ class TestGenerateTopologyCommand:
         with tempfile.NamedTemporaryFile(suffix=".yml", delete=False) as tmp_file:
             try:
                 generate_topology_command(
-                    db_manager=self.mock_db,
+                    db=self.mock_lab_db,
                     output=tmp_file.name,
                     topology_name="generated_lab",  # This should trigger config default
                     prefix="test",
@@ -55,6 +55,7 @@ class TestGenerateTopologyCommand:
                     template="template.j2",
                     kinds_config="kinds.yml",
                     validate=False,
+                    current_lab="testlab",
                     upload_remote=False,
                 )
 
@@ -86,7 +87,7 @@ class TestGenerateTopologyCommand:
         with tempfile.NamedTemporaryFile(suffix=".yml", delete=False) as tmp_file:
             try:
                 generate_topology_command(
-                    db_manager=self.mock_db,
+                    db=self.mock_lab_db,
                     output=tmp_file.name,
                     # This should NOT trigger config default
                     topology_name="explicit_lab",
@@ -96,6 +97,7 @@ class TestGenerateTopologyCommand:
                     template="template.j2",
                     kinds_config="kinds.yml",
                     validate=False,
+                    current_lab="testlab",
                     upload_remote=False,
                 )
 
@@ -129,7 +131,7 @@ class TestGenerateTopologyCommand:
         with tempfile.NamedTemporaryFile(suffix=".yml", delete=False) as tmp_file:
             try:
                 generate_topology_command(
-                    db_manager=self.mock_db,
+                    db=self.mock_lab_db,
                     output=tmp_file.name,
                     topology_name="test_lab",
                     prefix=None,  # This should trigger config default
@@ -138,6 +140,7 @@ class TestGenerateTopologyCommand:
                     template="template.j2",
                     kinds_config="kinds.yml",
                     validate=False,
+                    current_lab="testlab",
                     upload_remote=False,
                 )
 
@@ -169,7 +172,7 @@ class TestGenerateTopologyCommand:
         with tempfile.NamedTemporaryFile(suffix=".yml", delete=False) as tmp_file:
             try:
                 generate_topology_command(
-                    db_manager=self.mock_db,
+                    db=self.mock_lab_db,
                     output=tmp_file.name,
                     topology_name="test_lab",
                     prefix="none",  # This should result in empty string
@@ -178,6 +181,7 @@ class TestGenerateTopologyCommand:
                     template="template.j2",
                     kinds_config="kinds.yml",
                     validate=False,
+                    current_lab="testlab",
                     upload_remote=False,
                 )
 
@@ -213,7 +217,7 @@ class TestGenerateTopologyCommand:
             try:
                 with pytest.raises(SystemExit) as exc_info:
                     generate_topology_command(
-                        db_manager=mock_db_empty,
+                        db=mock_db_empty,
                         output=tmp_file.name,
                         topology_name="test_lab",
                         prefix="test",
@@ -222,6 +226,7 @@ class TestGenerateTopologyCommand:
                         template="template.j2",
                         kinds_config="kinds.yml",
                         validate=False,
+                        current_lab="testlab",
                         upload_remote=False,
                     )
 

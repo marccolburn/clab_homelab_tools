@@ -11,6 +11,7 @@ import sys
 
 import click
 
+from clab_tools import __version__
 from clab_tools.commands.bridge_commands import (
     cleanup_bridges,
     configure_vlans,
@@ -20,6 +21,7 @@ from clab_tools.commands.bridge_commands import (
 from clab_tools.commands.data_commands import clear_data, show_data
 from clab_tools.commands.generate_topology import generate_topology
 from clab_tools.commands.import_csv import import_csv
+from clab_tools.commands.lab_commands import lab_commands
 from clab_tools.commands.remote_commands import remote
 from clab_tools.config.settings import initialize_settings
 from clab_tools.db.manager import DatabaseManager
@@ -28,8 +30,10 @@ from clab_tools.log_config.logger import get_logger, setup_logging
 
 
 @click.group()
+@click.version_option(version=__version__, prog_name="clab-tools")
 @click.option("--db-url", default=None, help="Database URL (overrides config file)")
 @click.option("--config", "-c", default=None, help="Path to configuration file")
+@click.option("--lab", "-l", default=None, help="Lab name to use (overrides config)")
 @click.option("--debug", is_flag=True, help="Enable debug mode")
 @click.option(
     "--log-level",
@@ -51,6 +55,7 @@ def cli(
     ctx,
     db_url,
     config,
+    lab,
     debug,
     log_level,
     log_format,
@@ -90,6 +95,10 @@ def cli(
         settings.debug = debug
         settings.logging.level = "DEBUG"
 
+    # Override lab settings with command line arguments
+    if lab:
+        settings.lab.current_lab = lab
+
     # Override remote settings with command line arguments
     if enable_remote or remote_host:
         settings.remote.enabled = True
@@ -108,22 +117,33 @@ def cli(
     setup_logging(settings.logging)
     logger = get_logger(__name__)
 
-    logger.info("Starting clab-tools CLI", version="2.0.0", debug=settings.debug)
+    from clab_tools import __version__
 
-    # Initialize database manager
+    logger.info("Starting clab-tools CLI", version=__version__, debug=settings.debug)
+
+    # Initialize database manager (multi-lab first approach)
     try:
         db_manager = DatabaseManager(settings=settings.database)
         if not db_manager.health_check():
             logger.error("Database health check failed")
             click.echo("✗ Database connection failed", err=True)
             sys.exit(1)
+
+        # Ensure current lab exists
+        current_lab = settings.lab.current_lab
+        db_manager.get_or_create_lab(current_lab)
+        logger.info("Using lab context", lab=current_lab)
+
     except Exception as e:
         logger.error("Failed to initialize database", error=str(e))
         click.echo(f"✗ Database initialization failed: {e}", err=True)
         sys.exit(1)
 
     # Store in context for commands
-    ctx.obj["db_manager"] = db_manager
+    ctx.obj["raw_db_manager"] = db_manager
+    ctx.obj["db_manager"] = db_manager  # For compatibility with bridge commands
+    ctx.obj["current_lab"] = current_lab
+    ctx.obj["lab_name"] = current_lab  # For compatibility with bridge commands
     ctx.obj["settings"] = settings
     ctx.obj["debug"] = settings.debug
 
@@ -140,8 +160,9 @@ cli.add_command(list_bridges)
 cli.add_command(show_data)
 cli.add_command(clear_data)
 
-# Remote commands group
+# Command groups
 cli.add_command(remote)
+cli.add_command(lab_commands)
 
 
 if __name__ == "__main__":
