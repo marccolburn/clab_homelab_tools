@@ -6,11 +6,13 @@ Handles displaying and managing data stored in the database with multi-lab suppo
 
 import click
 
+from ..common.utils import handle_success, with_lab_context
 from ..db.context import get_lab_db
 
 
 @click.command()
 @click.pass_context
+@with_lab_context
 def show_data(ctx):
     """
     Display current data stored in the current lab.
@@ -18,7 +20,7 @@ def show_data(ctx):
     Shows all nodes, connections, and topology configurations stored in the current lab.
     """
     db = get_lab_db(ctx.obj)
-    current_lab = ctx.obj["current_lab"]
+    current_lab = db.get_current_lab()
 
     click.echo(f"=== Lab '{current_lab}' Contents ===")
 
@@ -48,6 +50,7 @@ def show_data(ctx):
 @click.command()
 @click.option("--force", is_flag=True, help="Proceed without confirmation")
 @click.pass_context
+@with_lab_context
 def clear_data(ctx, force):
     """
     Clear all data from the current lab.
@@ -56,7 +59,7 @@ def clear_data(ctx, force):
     from the current lab only.
     """
     db = get_lab_db(ctx.obj)
-    current_lab = ctx.obj["current_lab"]
+    current_lab = db.get_current_lab()
 
     if not force:
         if not click.confirm(
@@ -69,4 +72,4 @@ def clear_data(ctx, force):
     db.clear_connections()
     db.clear_nodes()
 
-    click.echo(f"✓ Lab '{current_lab}' cleared successfully")
+    handle_success(f"Lab '{current_lab}' cleared successfully")
