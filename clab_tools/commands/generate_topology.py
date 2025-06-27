@@ -41,12 +41,17 @@ def generate_topology_command(
         validate: Whether to validate the generated YAML
         upload_remote: Whether to upload to remote host
     """
+    settings = get_settings()
+
     # Use config default prefix if none specified
     if prefix is None:
-        settings = get_settings()
         prefix = settings.topology.default_prefix
     elif prefix.lower() == "none":
         prefix = ""
+
+    # Use config default topology name if none specified or default
+    if topology_name == "generated_lab":
+        topology_name = settings.topology.default_topology_name
 
     generator = TopologyGenerator(db_manager, template, kinds_config)
 

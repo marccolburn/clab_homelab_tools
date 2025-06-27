@@ -313,6 +313,7 @@ logging:
 # Topology settings
 topology:
   default_prefix: "clab"
+  default_topology_name: "homelab"
   default_mgmt_network: "clab"
   default_mgmt_subnet: "172.20.20.0/24"
   template_path: "topology_template.j2"
@@ -349,6 +350,7 @@ export CLAB_LOG_LEVEL="DEBUG"
 export CLAB_LOG_FORMAT="json"
 export CLAB_DEBUG="true"
 export CLAB_TOPOLOGY_DEFAULT_PREFIX="mylab"
+export CLAB_TOPOLOGY_DEFAULT_TOPOLOGY_NAME="my_lab"
 ```
 
 **Remote Host Settings:**

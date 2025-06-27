@@ -35,7 +35,12 @@ def test_connection(host, username, password, private_key, port):
         settings.remote.username = username
     if password:
         settings.remote.password = password
-    elif not private_key and not settings.remote.private_key_path:
+    elif (
+        not private_key
+        and not settings.remote.private_key_path
+        and not settings.remote.password
+    ):
+        # Only prompt for password if no auth method is available
         password = click.prompt("Password", hide_input=True)
         settings.remote.password = password
     if private_key:
@@ -84,7 +89,8 @@ def upload_topology(local_file, remote_path, host, username, password):
         settings.remote.username = username
     if password:
         settings.remote.password = password
-    elif not settings.remote.private_key_path:
+    elif not settings.remote.private_key_path and not settings.remote.password:
+        # Only prompt for password if no auth method is available
         password = click.prompt("Password", hide_input=True)
         settings.remote.password = password
 
@@ -120,7 +126,8 @@ def execute(command, host, username, password):
         settings.remote.username = username
     if password:
         settings.remote.password = password
-    elif not settings.remote.private_key_path:
+    elif not settings.remote.private_key_path and not settings.remote.password:
+        # Only prompt for password if no auth method is available
         password = click.prompt("Password", hide_input=True)
         settings.remote.password = password
 

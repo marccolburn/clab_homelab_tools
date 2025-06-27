@@ -98,6 +98,7 @@ logging:
 
 topology:
   default_prefix: "testlab"
+  default_topology_name: "test_lab"
 
 debug: true
 """
@@ -111,6 +112,7 @@ debug: true
         assert settings.logging.level == "DEBUG"
         assert settings.logging.format == "console"
         assert settings.topology.default_prefix == "testlab"
+        assert settings.topology.default_topology_name == "test_lab"
         assert settings.debug is True
 
     def test_invalid_config_file(self, temp_dir):
@@ -151,3 +153,34 @@ class TestGlobalSettings:
         settings = get_settings()
         assert settings is custom_settings
         assert settings.debug is True
+
+
+class TestTopologySettings:
+    """Test cases for TopologySettings."""
+
+    def test_default_values(self):
+        """Test default topology settings."""
+        settings = TopologySettings()
+        assert settings.default_prefix == "clab"
+        assert settings.default_topology_name == "generated_lab"
+        assert settings.default_mgmt_network == "clab"
+        assert settings.default_mgmt_subnet == "172.20.20.0/24"
+        assert settings.template_path == "topology_template.j2"
+        assert settings.output_dir == "."
+
+    def test_environment_variables(self):
+        """Test loading from environment variables."""
+        os.environ["CLAB_TOPOLOGY_DEFAULT_PREFIX"] = "mylab"
+        os.environ["CLAB_TOPOLOGY_DEFAULT_TOPOLOGY_NAME"] = "my_topology"
+        os.environ["CLAB_TOPOLOGY_DEFAULT_MGMT_NETWORK"] = "mgmt"
+
+        try:
+            settings = TopologySettings()
+            assert settings.default_prefix == "mylab"
+            assert settings.default_topology_name == "my_topology"
+            assert settings.default_mgmt_network == "mgmt"
+        finally:
+            # Clean up environment
+            os.environ.pop("CLAB_TOPOLOGY_DEFAULT_PREFIX", None)
+            os.environ.pop("CLAB_TOPOLOGY_DEFAULT_TOPOLOGY_NAME", None)
+            os.environ.pop("CLAB_TOPOLOGY_DEFAULT_MGMT_NETWORK", None)
