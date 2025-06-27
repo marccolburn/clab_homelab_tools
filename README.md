@@ -12,11 +12,11 @@ cd clab_homelab_tools
 
 # Create lab and import data
 clab-tools lab create my-lab
-clab-tools import-csv -n nodes.csv -c connections.csv
+clab-tools data import -n nodes.csv -c connections.csv
 
 # Generate and deploy
-clab-tools generate-topology -o lab.yml
-sudo clab-tools create-bridges
+clab-tools topology generate -o lab.yml
+sudo clab-tools bridge create
 sudo clab deploy -t lab.yml
 ```
 
@@ -25,7 +25,7 @@ sudo clab deploy -t lab.yml
 - **Multi-Lab Management**: Isolated environments for different topology projects
 - **CSV Import/Export**: Simple data format for network topology definitions
 - **Remote Host Support**: Deploy and manage topologies on remote containerlab hosts
-- **Bridge Management**: Automated Linux bridge creation with VLAN support
+- **Bridge Management**: Automated and manual Linux bridge creation with VLAN support
 - **Configuration Flexibility**: YAML files, environment variables, and CLI overrides
 
 ## Documentation
@@ -51,9 +51,9 @@ clab-tools
 ├── Multi-Lab Database (SQLite)
 ├── CLI Commands
 │   ├── lab (create/switch/delete)
-│   ├── import-csv / show-data / clear-data
-│   ├── generate-topology
-│   ├── create-bridges / configure-vlans
+│   ├── data (import/show/clear)
+│   ├── topology (generate)
+│   ├── bridge (create/create-bridge/configure/list)
 │   └── remote (execute/upload/test)
 ├── Local & Remote Deployment
 └── Configuration Management

@@ -8,9 +8,9 @@ from clab_tools.main import cli
 
 
 def test_configure_vlans_command_help():
-    """Test that configure-vlans command help works."""
+    """Test that bridge configure command help works."""
     runner = CliRunner()
-    result = runner.invoke(cli, ["configure-vlans", "--help"])
+    result = runner.invoke(cli, ["bridge", "configure", "--help"])
 
     assert result.exit_code == 0
     assert "Configure VLANs on bridge interfaces" in result.output
@@ -19,13 +19,13 @@ def test_configure_vlans_command_help():
 
 
 def test_configure_vlans_dry_run(tmp_path):
-    """Test configure-vlans command with dry-run."""
+    """Test bridge configure command with dry-run."""
     # Create a temporary database
     db_file = tmp_path / "test.db"
 
     runner = CliRunner()
     result = runner.invoke(
-        cli, ["--db-url", f"sqlite:///{db_file}", "configure-vlans", "--dry-run"]
+        cli, ["--db-url", f"sqlite:///{db_file}", "bridge", "configure", "--dry-run"]
     )
 
     # Should succeed even with no bridges in database
@@ -35,7 +35,7 @@ def test_configure_vlans_dry_run(tmp_path):
 
 
 def test_configure_vlans_specific_bridge_dry_run(tmp_path):
-    """Test configure-vlans command with specific bridge and dry-run."""
+    """Test bridge configure command with specific bridge and dry-run."""
     # Create a temporary database
     db_file = tmp_path / "test.db"
 
@@ -45,7 +45,8 @@ def test_configure_vlans_specific_bridge_dry_run(tmp_path):
         [
             "--db-url",
             f"sqlite:///{db_file}",
-            "configure-vlans",
+            "bridge",
+            "configure",
             "--bridge",
             "test-bridge",
             "--dry-run",

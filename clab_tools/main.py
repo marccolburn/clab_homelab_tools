@@ -15,6 +15,7 @@ from clab_tools import __version__
 from clab_tools.commands.bridge_commands import (
     cleanup_bridges,
     configure_vlans,
+    create_bridge,
     create_bridges,
     list_bridges,
 )
@@ -152,19 +153,44 @@ def cli(
     logger.debug("CLI initialization completed")
 
 
-# Register all command modules
-cli.add_command(import_csv)
-cli.add_command(generate_topology)
-cli.add_command(create_bridges)
-cli.add_command(cleanup_bridges)
-cli.add_command(configure_vlans)
-cli.add_command(list_bridges)
-cli.add_command(show_data)
-cli.add_command(clear_data)
+# Create command groups
+@cli.group()
+def data():
+    """Data management commands for importing, exporting, and viewing lab data."""
+    pass
 
-# Command groups
+
+@cli.group()
+def topology():
+    """Topology generation and validation commands."""
+    pass
+
+
+@cli.group()
+def bridge():
+    """Bridge management commands for network connectivity."""
+    pass
+
+
+# Add individual commands to groups
+data.add_command(import_csv, name="import")
+data.add_command(show_data, name="show")
+data.add_command(clear_data, name="clear")
+
+topology.add_command(generate_topology, name="generate")
+
+bridge.add_command(create_bridges, name="create")
+bridge.add_command(create_bridge, name="create-bridge")
+bridge.add_command(cleanup_bridges, name="cleanup")
+bridge.add_command(configure_vlans, name="configure")
+bridge.add_command(list_bridges, name="list")
+
+# Register command groups and existing groups
+cli.add_command(lab_commands, name="lab")
 cli.add_command(remote)
-cli.add_command(lab_commands)
+cli.add_command(data)
+cli.add_command(topology)
+cli.add_command(bridge)
 
 
 if __name__ == "__main__":

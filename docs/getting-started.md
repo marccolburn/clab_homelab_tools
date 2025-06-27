@@ -67,20 +67,20 @@ sw1,br-mgmt,direct,eth1,eth3
 
 ```bash
 # Import CSV data
-clab-tools import-csv -n nodes.csv -c connections.csv
+clab-tools data import -n nodes.csv -c connections.csv
 
 # View imported data
-clab-tools show-data
+clab-tools data show
 ```
 
 ### 4. Deploy Locally
 
 ```bash
 # Generate topology file
-clab-tools generate-topology -o tutorial.yml -t "tutorial-lab"
+clab-tools topology generate -o tutorial.yml -t "tutorial-lab"
 
 # Create required bridges (requires sudo)
-sudo clab-tools create-bridges
+sudo clab-tools bridge create
 
 # Deploy with containerlab
 sudo clab deploy -t tutorial.yml
@@ -93,7 +93,7 @@ sudo clab deploy -t tutorial.yml
 sudo clab destroy -t tutorial.yml
 
 # Remove bridges
-sudo clab-tools delete-bridges
+sudo clab-tools bridge cleanup
 
 # Remove lab data
 clab-tools lab delete tutorial

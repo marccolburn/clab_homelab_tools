@@ -227,8 +227,8 @@ clab-tools lab create $LAB_NAME || clab-tools lab switch $LAB_NAME
 # 2. Import topology data
 echo "→ Importing topology data..."
 clab-tools data import \
-    --nodes nodes.csv \
-    --connections connections.csv
+    --nodes-csv nodes.csv \
+    --connections-csv connections.csv
 
 # 3. Show imported data for verification
 echo "→ Verifying imported data..."
@@ -238,20 +238,16 @@ clab-tools data show
 echo "→ Generating topology file..."
 clab-tools topology generate \
     --output $TOPOLOGY_FILE \
-    --format yaml
+    --topology-name $LAB_NAME
 
 # 5. Create bridges on remote host
 echo "→ Creating bridges on remote host..."
-clab-tools bridge create \
-    --remote-host $REMOTE_HOST \
-    --remote-user $REMOTE_USER
+clab-tools --remote-host $REMOTE_HOST --remote-user $REMOTE_USER bridge create
 
 # 6. Configure VLANs if needed
 if [ -f "vlans.csv" ]; then
     echo "→ Configuring VLANs..."
-    clab-tools bridge configure \
-        --remote-host $REMOTE_HOST \
-        --remote-user $REMOTE_USER
+    clab-tools --remote-host $REMOTE_HOST --remote-user $REMOTE_USER bridge configure
 fi
 
 # 7. Upload topology to remote host

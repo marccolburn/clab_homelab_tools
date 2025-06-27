@@ -169,7 +169,7 @@ class TestBridgeManager:
             assert success is True
             assert "successfully created" in message.lower()
 
-            # Verify VLAN-aware bridge creation commands
+            # Verify VLAN-aware bridge creation commands (including STP disable)
             expected_calls = [
                 call(
                     [
@@ -190,6 +190,22 @@ class TestBridgeManager:
                 ),
                 call(
                     ["sudo", "ip", "link", "set", "br-test", "up"],
+                    capture_output=True,
+                    text=True,
+                    check=True,
+                ),
+                call(
+                    [
+                        "sudo",
+                        "ip",
+                        "link",
+                        "set",
+                        "br-test",
+                        "type",
+                        "bridge",
+                        "stp_state",
+                        "0",
+                    ],
                     capture_output=True,
                     text=True,
                     check=True,
