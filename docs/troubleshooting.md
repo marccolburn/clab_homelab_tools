@@ -63,12 +63,12 @@ pip3 install -r requirements.txt
 # Initialize database
 ./clab-tools.sh db init
 
-# Check database location
+# Check database location (in project directory)
 ls -la clab_topology.db
 
 # Reset database
 rm clab_topology.db
-./clab-tools.sh db init
+clab-tools data show  # Will recreate database automatically
 ```
 
 ### Data Import Issues

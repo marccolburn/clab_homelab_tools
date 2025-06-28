@@ -21,7 +21,9 @@ class TestDatabaseSettings:
     def test_default_values(self):
         """Test default database settings."""
         settings = DatabaseSettings()
-        assert settings.url == "sqlite:///clab_topology.db"
+        # Should be a SQLite URL with absolute path to project directory
+        assert settings.url.startswith("sqlite:///")
+        assert "clab_topology.db" in settings.url
         assert settings.echo is False
         assert settings.pool_pre_ping is True
 
@@ -119,9 +121,9 @@ debug: true
         """Test handling of invalid config file."""
         # Non-existent file should not cause error
         settings = Settings(config_file="nonexistent.yaml")
-        assert (
-            settings.database.url == "sqlite:///clab_topology.db"
-        )  # Should use defaults
+        # Should use dynamic default path
+        assert settings.database.url.startswith("sqlite:///")
+        assert "clab_topology.db" in settings.database.url
 
     def test_to_dict(self):
         """Test converting settings to dictionary."""
