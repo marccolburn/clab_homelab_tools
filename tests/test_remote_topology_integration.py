@@ -26,8 +26,8 @@ class TestTopologyGenerationWithRemote:
             ("router1", "eth0", "switch1", "eth1"),
         ]
 
-    @patch("clab_tools.commands.generate_topology.get_remote_host_manager")
-    @patch("clab_tools.commands.generate_topology.TopologyGenerator")
+    @patch("clab_tools.commands.topology_commands.get_remote_host_manager")
+    @patch("clab_tools.commands.topology_commands.TopologyGenerator")
     def test_generate_without_remote_upload(
         self, mock_generator_class, mock_get_remote
     ):
@@ -59,8 +59,8 @@ class TestTopologyGenerationWithRemote:
         # Verify remote manager was not used
         mock_get_remote.assert_not_called()
 
-    @patch("clab_tools.commands.generate_topology.get_remote_host_manager")
-    @patch("clab_tools.commands.generate_topology.TopologyGenerator")
+    @patch("clab_tools.commands.topology_commands.get_remote_host_manager")
+    @patch("clab_tools.commands.topology_commands.TopologyGenerator")
     def test_generate_with_remote_upload_success(
         self, mock_generator_class, mock_get_remote
     ):
@@ -101,8 +101,8 @@ class TestTopologyGenerationWithRemote:
         mock_remote_manager.upload_topology_file.assert_called_with("test.yml")
         mock_remote_manager.__exit__.assert_called_once()
 
-    @patch("clab_tools.commands.generate_topology.get_remote_host_manager")
-    @patch("clab_tools.commands.generate_topology.TopologyGenerator")
+    @patch("clab_tools.commands.topology_commands.get_remote_host_manager")
+    @patch("clab_tools.commands.topology_commands.TopologyGenerator")
     def test_generate_with_remote_upload_no_remote_configured(
         self, mock_generator_class, mock_get_remote
     ):
@@ -131,8 +131,8 @@ class TestTopologyGenerationWithRemote:
                 upload_remote=True,
             )
 
-    @patch("clab_tools.commands.generate_topology.get_remote_host_manager")
-    @patch("clab_tools.commands.generate_topology.TopologyGenerator")
+    @patch("clab_tools.commands.topology_commands.get_remote_host_manager")
+    @patch("clab_tools.commands.topology_commands.TopologyGenerator")
     def test_generate_with_remote_upload_failure(
         self, mock_generator_class, mock_get_remote
     ):
@@ -167,7 +167,7 @@ class TestTopologyGenerationWithRemote:
                 upload_remote=True,
             )
 
-    @patch("clab_tools.commands.generate_topology.TopologyGenerator")
+    @patch("clab_tools.commands.topology_commands.TopologyGenerator")
     def test_generate_with_no_nodes(self, mock_generator_class):
         """Test topology generation with no nodes in database."""
         # Empty database
@@ -187,8 +187,8 @@ class TestTopologyGenerationWithRemote:
                 upload_remote=False,
             )
 
-    @patch("clab_tools.commands.generate_topology.get_remote_host_manager")
-    @patch("clab_tools.commands.generate_topology.TopologyGenerator")
+    @patch("clab_tools.commands.topology_commands.get_remote_host_manager")
+    @patch("clab_tools.commands.topology_commands.TopologyGenerator")
     def test_generate_topology_failure(self, mock_generator_class, mock_get_remote):
         """Test handling of topology generation failure."""
         # Setup failing topology generator
@@ -210,8 +210,8 @@ class TestTopologyGenerationWithRemote:
                 upload_remote=False,
             )
 
-    @patch("clab_tools.commands.generate_topology.get_remote_host_manager")
-    @patch("clab_tools.commands.generate_topology.TopologyGenerator")
+    @patch("clab_tools.commands.topology_commands.get_remote_host_manager")
+    @patch("clab_tools.commands.topology_commands.TopologyGenerator")
     def test_generate_with_validation_failure(
         self, mock_generator_class, mock_get_remote
     ):

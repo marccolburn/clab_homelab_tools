@@ -11,6 +11,28 @@ from clab_tools.main import cli
 
 
 @pytest.fixture
+def setup_test_nodes():
+    """Fixture that returns a function to add test nodes to the database."""
+
+    def _setup_nodes(db_file, lab_name="test-lab"):
+        from clab_tools.config.settings import get_settings
+        from clab_tools.db.manager import DatabaseManager
+
+        settings = get_settings()
+        settings.database.url = f"sqlite:///{db_file}"
+        db = DatabaseManager(settings.database)
+
+        # Add some test nodes
+        db.insert_node("router1", "nokia_srlinux", "192.168.1.1", lab_name=lab_name)
+        db.insert_node("router2", "nokia_srlinux", "192.168.1.2", lab_name=lab_name)
+        db.insert_node("switch1", "bridge", "192.168.1.10", lab_name=lab_name)
+
+        return db
+
+    return _setup_nodes
+
+
+@pytest.fixture
 def source_file(tmp_path):
     """Create a source file to upload."""
     source_file = tmp_path / "config.txt"
@@ -45,17 +67,14 @@ def test_node_upload_command_help():
 
 
 @patch("clab_tools.node.manager.NodeManager.upload_to_multiple_nodes")
-def test_upload_to_specific_node(mock_upload, source_file, tmp_path):
+def test_upload_to_specific_node(mock_upload, source_file, tmp_path, setup_test_nodes):
     """Test upload to specific node by name."""
     db_file = tmp_path / "test.db"
 
-    # Mock successful upload
-    mock_upload.return_value = {
-        "total_nodes": 1,
-        "successful": 1,
-        "failed": 0,
-        "results": {"router1": {"success": True, "message": "Upload successful"}},
-    }
+    # Mock successful upload - return list of tuples as expected
+    mock_upload.return_value = [
+        ("router1", True, "Upload successful"),
+    ]
 
     runner = CliRunner()
     # Create lab and add test data first
@@ -64,6 +83,9 @@ def test_upload_to_specific_node(mock_upload, source_file, tmp_path):
         ["--db-url", f"sqlite:///{db_file}", "--quiet", "lab", "create", "test-lab"],
     )
     assert result.exit_code == 0
+
+    # Add nodes to database
+    setup_test_nodes(db_file, "test-lab")
 
     result = runner.invoke(
         cli,
@@ -94,21 +116,16 @@ def test_upload_to_specific_node(mock_upload, source_file, tmp_path):
 
 
 @patch("clab_tools.node.manager.NodeManager.upload_to_multiple_nodes")
-def test_upload_to_all_nodes(mock_upload, source_file, tmp_path):
+def test_upload_to_all_nodes(mock_upload, source_file, tmp_path, setup_test_nodes):
     """Test upload to all nodes in lab."""
     db_file = tmp_path / "test.db"
 
-    # Mock successful upload
-    mock_upload.return_value = {
-        "total_nodes": 3,
-        "successful": 3,
-        "failed": 0,
-        "results": {
-            "router1": {"success": True, "message": "Upload successful"},
-            "router2": {"success": True, "message": "Upload successful"},
-            "switch1": {"success": True, "message": "Upload successful"},
-        },
-    }
+    # Mock successful upload - return list of tuples as expected
+    mock_upload.return_value = [
+        ("router1", True, "Upload successful"),
+        ("router2", True, "Upload successful"),
+        ("switch1", True, "Upload successful"),
+    ]
 
     runner = CliRunner()
     result = runner.invoke(
@@ -116,6 +133,9 @@ def test_upload_to_all_nodes(mock_upload, source_file, tmp_path):
         ["--db-url", f"sqlite:///{db_file}", "--quiet", "lab", "create", "test-lab"],
     )
     assert result.exit_code == 0
+
+    # Add nodes to database
+    setup_test_nodes(db_file, "test-lab")
 
     result = runner.invoke(
         cli,
@@ -144,20 +164,15 @@ def test_upload_to_all_nodes(mock_upload, source_file, tmp_path):
 
 
 @patch("clab_tools.node.manager.NodeManager.upload_to_multiple_nodes")
-def test_upload_by_kind(mock_upload, source_file, tmp_path):
+def test_upload_by_kind(mock_upload, source_file, tmp_path, setup_test_nodes):
     """Test upload to all nodes of specific kind."""
     db_file = tmp_path / "test.db"
 
-    # Mock successful upload
-    mock_upload.return_value = {
-        "total_nodes": 2,
-        "successful": 2,
-        "failed": 0,
-        "results": {
-            "router1": {"success": True, "message": "Upload successful"},
-            "router2": {"success": True, "message": "Upload successful"},
-        },
-    }
+    # Mock successful upload - return list of tuples as expected
+    mock_upload.return_value = [
+        ("router1", True, "Upload successful"),
+        ("router2", True, "Upload successful"),
+    ]
 
     runner = CliRunner()
     result = runner.invoke(
@@ -165,6 +180,9 @@ def test_upload_by_kind(mock_upload, source_file, tmp_path):
         ["--db-url", f"sqlite:///{db_file}", "--quiet", "lab", "create", "test-lab"],
     )
     assert result.exit_code == 0
+
+    # Add nodes to database
+    setup_test_nodes(db_file, "test-lab")
 
     result = runner.invoke(
         cli,
@@ -194,21 +212,16 @@ def test_upload_by_kind(mock_upload, source_file, tmp_path):
 
 
 @patch("clab_tools.node.manager.NodeManager.upload_to_multiple_nodes")
-def test_upload_to_node_list(mock_upload, source_file, tmp_path):
+def test_upload_to_node_list(mock_upload, source_file, tmp_path, setup_test_nodes):
     """Test upload to comma-separated list of nodes."""
     db_file = tmp_path / "test.db"
 
-    # Mock successful upload
-    mock_upload.return_value = {
-        "total_nodes": 3,
-        "successful": 3,
-        "failed": 0,
-        "results": {
-            "router1": {"success": True, "message": "Upload successful"},
-            "router2": {"success": True, "message": "Upload successful"},
-            "switch1": {"success": True, "message": "Upload successful"},
-        },
-    }
+    # Mock successful upload - return list of tuples as expected
+    mock_upload.return_value = [
+        ("router1", True, "Upload successful"),
+        ("router2", True, "Upload successful"),
+        ("switch1", True, "Upload successful"),
+    ]
 
     runner = CliRunner()
     result = runner.invoke(
@@ -216,6 +229,9 @@ def test_upload_to_node_list(mock_upload, source_file, tmp_path):
         ["--db-url", f"sqlite:///{db_file}", "--quiet", "lab", "create", "test-lab"],
     )
     assert result.exit_code == 0
+
+    # Add nodes to database
+    setup_test_nodes(db_file, "test-lab")
 
     result = runner.invoke(
         cli,
@@ -245,17 +261,14 @@ def test_upload_to_node_list(mock_upload, source_file, tmp_path):
 
 
 @patch("clab_tools.node.manager.NodeManager.upload_to_multiple_nodes")
-def test_upload_directory(mock_upload, source_dir, tmp_path):
+def test_upload_directory(mock_upload, source_dir, tmp_path, setup_test_nodes):
     """Test upload of directory with recursive copy."""
     db_file = tmp_path / "test.db"
 
-    # Mock successful upload
-    mock_upload.return_value = {
-        "total_nodes": 1,
-        "successful": 1,
-        "failed": 0,
-        "results": {"router1": {"success": True, "message": "Directory uploaded"}},
-    }
+    # Mock successful upload - return list of tuples as expected
+    mock_upload.return_value = [
+        ("router1", True, "Directory uploaded"),
+    ]
 
     runner = CliRunner()
     result = runner.invoke(
@@ -263,6 +276,9 @@ def test_upload_directory(mock_upload, source_dir, tmp_path):
         ["--db-url", f"sqlite:///{db_file}", "--quiet", "lab", "create", "test-lab"],
     )
     assert result.exit_code == 0
+
+    # Add nodes to database
+    setup_test_nodes(db_file, "test-lab")
 
     result = runner.invoke(
         cli,
@@ -290,17 +306,16 @@ def test_upload_directory(mock_upload, source_dir, tmp_path):
 
 
 @patch("clab_tools.node.manager.NodeManager.upload_to_multiple_nodes")
-def test_upload_with_custom_credentials(mock_upload, source_file, tmp_path):
+def test_upload_with_custom_credentials(
+    mock_upload, source_file, tmp_path, setup_test_nodes
+):
     """Test upload with custom SSH credentials."""
     db_file = tmp_path / "test.db"
 
-    # Mock successful upload
-    mock_upload.return_value = {
-        "total_nodes": 1,
-        "successful": 1,
-        "failed": 0,
-        "results": {"router1": {"success": True, "message": "Upload successful"}},
-    }
+    # Mock successful upload - return list of tuples as expected
+    mock_upload.return_value = [
+        ("router1", True, "Upload successful"),
+    ]
 
     runner = CliRunner()
     result = runner.invoke(
@@ -308,6 +323,9 @@ def test_upload_with_custom_credentials(mock_upload, source_file, tmp_path):
         ["--db-url", f"sqlite:///{db_file}", "--quiet", "lab", "create", "test-lab"],
     )
     assert result.exit_code == 0
+
+    # Add nodes to database
+    setup_test_nodes(db_file, "test-lab")
 
     result = runner.invoke(
         cli,
@@ -339,19 +357,16 @@ def test_upload_with_custom_credentials(mock_upload, source_file, tmp_path):
 
 
 @patch("clab_tools.node.manager.NodeManager.upload_to_multiple_nodes")
-def test_upload_with_ssh_key(mock_upload, source_file, tmp_path):
+def test_upload_with_ssh_key(mock_upload, source_file, tmp_path, setup_test_nodes):
     """Test upload with SSH private key authentication."""
     db_file = tmp_path / "test.db"
     key_file = tmp_path / "test_key"
     key_file.write_text("fake private key content")
 
-    # Mock successful upload
-    mock_upload.return_value = {
-        "total_nodes": 1,
-        "successful": 1,
-        "failed": 0,
-        "results": {"router1": {"success": True, "message": "Upload successful"}},
-    }
+    # Mock successful upload - return list of tuples as expected
+    mock_upload.return_value = [
+        ("router1", True, "Upload successful"),
+    ]
 
     runner = CliRunner()
     result = runner.invoke(
@@ -359,6 +374,9 @@ def test_upload_with_ssh_key(mock_upload, source_file, tmp_path):
         ["--db-url", f"sqlite:///{db_file}", "--quiet", "lab", "create", "test-lab"],
     )
     assert result.exit_code == 0
+
+    # Add nodes to database
+    setup_test_nodes(db_file, "test-lab")
 
     result = runner.invoke(
         cli,
@@ -448,9 +466,8 @@ def test_upload_no_target_specified(source_file, tmp_path):
 
     assert result.exit_code != 0
     assert (
-        "must specify" in result.output
-        or "required" in result.output
-        or "choose one" in result.output
+        "Must specify exactly one of: --node, --kind, --nodes, or --all"
+        in result.output
     )
 
 
@@ -484,9 +501,8 @@ def test_upload_multiple_targets_specified(source_file, tmp_path):
 
     assert result.exit_code != 0
     assert (
-        "mutually exclusive" in result.output
-        or "only one" in result.output
-        or "conflicting" in result.output
+        "Must specify exactly one of: --node, --kind, --nodes, or --all"
+        in result.output
     )
 
 
@@ -520,29 +536,20 @@ def test_upload_both_source_and_source_dir(source_file, source_dir, tmp_path):
     )
 
     assert result.exit_code != 0
-    assert (
-        "mutually exclusive" in result.output
-        or "only one" in result.output
-        or "conflicting" in result.output
-    )
+    assert "Must specify exactly one of: --source or --source-dir" in result.output
 
 
 @patch("clab_tools.node.manager.NodeManager.upload_to_multiple_nodes")
-def test_upload_with_failures(mock_upload, source_file, tmp_path):
+def test_upload_with_failures(mock_upload, source_file, tmp_path, setup_test_nodes):
     """Test upload with some node failures."""
     db_file = tmp_path / "test.db"
 
-    # Mock upload with some failures
-    mock_upload.return_value = {
-        "total_nodes": 3,
-        "successful": 2,
-        "failed": 1,
-        "results": {
-            "router1": {"success": True, "message": "Upload successful"},
-            "router2": {"success": True, "message": "Upload successful"},
-            "router3": {"success": False, "message": "SSH connection failed"},
-        },
-    }
+    # Mock upload with some failures - return list of tuples as expected
+    mock_upload.return_value = [
+        ("router1", True, "Upload successful"),
+        ("router2", True, "Upload successful"),
+        ("router3", False, "SSH connection failed"),
+    ]
 
     runner = CliRunner()
     result = runner.invoke(
@@ -550,6 +557,9 @@ def test_upload_with_failures(mock_upload, source_file, tmp_path):
         ["--db-url", f"sqlite:///{db_file}", "--quiet", "lab", "create", "test-lab"],
     )
     assert result.exit_code == 0
+
+    # Add nodes to database
+    setup_test_nodes(db_file, "test-lab")
 
     result = runner.invoke(
         cli,
@@ -566,24 +576,21 @@ def test_upload_with_failures(mock_upload, source_file, tmp_path):
         ],
     )
 
-    # Should still exit successfully but show failure details
-    assert result.exit_code == 0
-    assert "2/3" in result.output or "successful: 2" in result.output
-    assert "failed: 1" in result.output or "1 failed" in result.output
+    # Should exit with error code 1 since there were failures
+    assert result.exit_code == 1
+    assert "Successful: 2" in result.output
+    assert "Failed: 1" in result.output
 
 
 @patch("clab_tools.node.manager.NodeManager.upload_to_multiple_nodes")
-def test_upload_with_quiet_mode(mock_upload, source_file, tmp_path):
+def test_upload_with_quiet_mode(mock_upload, source_file, tmp_path, setup_test_nodes):
     """Test upload with --quiet flag suppresses detailed output."""
     db_file = tmp_path / "test.db"
 
-    # Mock successful upload
-    mock_upload.return_value = {
-        "total_nodes": 1,
-        "successful": 1,
-        "failed": 0,
-        "results": {"router1": {"success": True, "message": "Upload successful"}},
-    }
+    # Mock successful upload - return list of tuples as expected
+    mock_upload.return_value = [
+        ("router1", True, "Upload successful"),
+    ]
 
     runner = CliRunner()
     result = runner.invoke(
@@ -591,6 +598,9 @@ def test_upload_with_quiet_mode(mock_upload, source_file, tmp_path):
         ["--db-url", f"sqlite:///{db_file}", "--quiet", "lab", "create", "test-lab"],
     )
     assert result.exit_code == 0
+
+    # Add nodes to database
+    setup_test_nodes(db_file, "test-lab")
 
     result = runner.invoke(
         cli,
@@ -610,5 +620,5 @@ def test_upload_with_quiet_mode(mock_upload, source_file, tmp_path):
     )
 
     assert result.exit_code == 0
-    # In quiet mode, output should be minimal
-    assert len(result.output.strip()) < 100  # Arbitrary threshold for "minimal"
+    # In quiet mode, output should not have summary
+    assert "Upload Summary" not in result.output

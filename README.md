@@ -10,14 +10,15 @@ git clone https://github.com/marccolburn/clab_homelab_tools.git
 cd clab_homelab_tools
 ./install-cli.sh
 
-# Create lab and import data
+# Bootstrap a complete lab (new!)
+clab-tools lab bootstrap --nodes nodes.csv --connections connections.csv --output lab.yml
+
+# Or step-by-step:
 clab-tools lab create my-lab
 clab-tools data import -n nodes.csv -c connections.csv
-
-# Generate and deploy
 clab-tools topology generate -o lab.yml
 sudo clab-tools bridge create
-sudo clab deploy -t lab.yml
+clab-tools topology start lab.yml
 ```
 
 ## Key Features
@@ -27,6 +28,9 @@ sudo clab deploy -t lab.yml
 - **Remote Host Support**: Deploy and manage topologies on remote containerlab hosts
 - **Bridge Management**: Automated and manual Linux bridge creation with VLAN support
 - **Configuration Flexibility**: YAML files, environment variables, and CLI overrides
+- **Non-Interactive Mode**: Global `--quiet` flag for scripting and automation
+- **Node File Upload**: Upload files and directories directly to containerlab nodes
+- **Lab Lifecycle Commands**: Bootstrap and teardown complete lab environments with single commands
 
 ## Documentation
 
@@ -50,10 +54,11 @@ sudo clab deploy -t lab.yml
 clab-tools
 ├── Multi-Lab Database (SQLite)
 ├── CLI Commands
-│   ├── lab (create/switch/delete)
+│   ├── lab (create/switch/delete/bootstrap/teardown)
 │   ├── data (import/show/clear)
-│   ├── topology (generate)
-│   ├── bridge (create/create-bridge/configure/list)
+│   ├── topology (generate/start/stop)
+│   ├── bridge (create/create-bridge/configure/list/cleanup)
+│   ├── node (upload)
 │   └── remote (execute/upload/test)
 ├── Local & Remote Deployment
 └── Configuration Management

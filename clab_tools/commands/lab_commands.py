@@ -271,7 +271,7 @@ def bootstrap(ctx, nodes, connections, output, no_start, skip_vlans, dry_run):
     steps = [
         (
             "Import CSV data",
-            f"clab-tools data import -n {nodes} -c {connections} --force",
+            f"clab-tools data import -n {nodes} -c {connections} --clear-existing",
         ),
         ("Generate topology", f"clab-tools topology generate -o {output} --validate"),
     ]

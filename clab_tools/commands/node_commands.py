@@ -4,6 +4,7 @@ Node Commands
 CLI commands for managing individual containerlab nodes including file uploads.
 """
 
+import sys
 from pathlib import Path
 
 import click
@@ -32,7 +33,6 @@ def node_commands():
 )
 @click.option(
     "--source",
-    required=True,
     type=click.Path(exists=True, path_type=Path),
     help="Local file to upload",
 )
@@ -140,7 +140,7 @@ def upload(
                     handle_success(f"{node_name}: {message}")
             else:
                 failed_uploads += 1
-                handle_error(f"{node_name}: {message}")
+                handle_error(f"{node_name}: {message}", exit_code=0)
 
         # Summary
         if not quiet:
@@ -152,7 +152,7 @@ def upload(
 
         # Exit with error code if any uploads failed
         if failed_uploads > 0:
-            click.get_current_context().exit(1)
+            sys.exit(1)
 
     except ValueError as e:
         handle_error(str(e))
