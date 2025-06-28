@@ -34,16 +34,17 @@ jobs:
       run: |
         pytest tests/ -v --cov=clab_tools --cov-report=term
 
-    - name: Test CLI installation
+    - name: Test CLI functionality
       run: |
-        chmod +x clab-tools.sh
-        chmod +x install-cli.sh
-        # Install CLI wrapper
-        ./install-cli.sh
-        # Test basic functionality with new command structure
-        clab-tools data import -n example_nodes.csv -c example_connections.csv
-        clab-tools data show
-        clab-tools topology generate -o release_test.yml --validate
+        # Test CLI directly using the installed package
+        python -m clab_tools.cli data import -n example_nodes.csv -c example_connections.csv
+        python -m clab_tools.cli data show
+        python -m clab_tools.cli topology generate -o release_test.yml --validate
+
+        # Test the main.py entry point as well
+        python clab_tools/main.py data import -n example_nodes.csv -c example_connections.csv --lab test-release
+        python clab_tools/main.py data show --lab test-release
+        python clab_tools/main.py topology generate -o release_test2.yml --lab test-release --validate
 
     - name: Extract version from tag
       id: version
