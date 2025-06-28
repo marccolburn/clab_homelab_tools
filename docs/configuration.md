@@ -53,11 +53,11 @@ The main configuration file defines project-wide settings:
 project:
   name: "my-homelab"
   description: "My containerlab homelab setup"
-  version: "1.0.0"
+  version: "1.0.1"
 
 # Default Node Settings
 defaults:
-  node_image: "ceos:latest"
+  node_image: "vrnetlab/vr-vjunosrouter:23.2R1.15"
   mgmt_network: "clab-mgmt"
 
 # Bridge Configuration
@@ -97,7 +97,7 @@ bridges:
 |---------|-------------|---------|---------|
 | `project.name` | Project identifier | `"homelab"` | `"datacenter-sim"` |
 | `project.description` | Project description | `""` | `"Network simulation"` |
-| `project.version` | Project version | `"1.0.0"` | `"2.1.0"` |
+| `project.version` | Project version | `"1.0.1"` | `"2.1.0"` |
 
 ### Database Settings
 
@@ -147,7 +147,7 @@ database:
 
 | Setting | Description | Default | Example |
 |---------|-------------|---------|---------|
-| `defaults.node_image` | Default container image | `"ceos:latest"` | `"alpine:latest"` |
+| `defaults.node_image` | Default container image | `"vrnetlab/vr-vjunosrouter:23.2R1.15"` | `"alpine:latest"` |
 | `defaults.mgmt_network` | Management network name | `"clab-mgmt"` | `"mgmt-net"` |
 | `defaults.cpu` | Default CPU allocation | `1` | `2` |
 | `defaults.memory` | Default memory (MB) | `512` | `1024` |
@@ -229,21 +229,17 @@ When importing from CSV or defining nodes, you can override defaults per node:
 
 ```csv
 name,kind,image,cpu,memory,mgmt_ipv4
-router1,ceos,,2,1024,172.20.1.10
-switch1,srl,srlinux:latest,1,512,172.20.1.11
+router1,juniper_vjunosrouter,,2,1024,172.20.1.10
+switch1,juniper_vjunosrouter,,1,512,172.20.1.11
 ```
 
 ## Supported Node Kinds
 
 The following node kinds are supported (from `supported_kinds.yaml`):
 
-- **ceos** - Arista cEOS
-- **srl** - Nokia SR Linux
-- **crpd** - Juniper cRPD
-- **vr-sros** - Nokia SR OS
-- **linux** - Generic Linux container
-- **alpine** - Alpine Linux
-- **ubuntu** - Ubuntu Linux
+- **juniper_vjunosrouter** - Juniper vJunos Router (vrnetlab/vr-vjunosrouter:23.2R1.15)
+
+Additional kinds can be added by updating the `supported_kinds.yaml` configuration file.
 
 ## Configuration Validation
 

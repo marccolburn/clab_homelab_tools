@@ -86,8 +86,8 @@ Each lab maintains separate:
 
 ```csv
 name,kind,image,mgmt_ipv4,cpu,memory,labels
-spine1,ceos,ceos:latest,172.20.1.10,2,2048,role=spine
-leaf1,srl,srlinux:latest,172.20.1.11,1,1024,role=leaf
+spine1,juniper_vjunosrouter,,172.20.1.10,2,2048,role=spine
+leaf1,juniper_vjunosrouter,,172.20.1.11,1,1024,role=leaf
 ```
 
 ### Connection Data Format
@@ -238,7 +238,7 @@ project:
   name: "my-homelab"
 
 defaults:
-  node_image: "ceos:latest"
+  node_image: "vrnetlab/vr-vjunosrouter:23.2R1.15"
   mgmt_network: "clab-mgmt"
 
 bridges:
