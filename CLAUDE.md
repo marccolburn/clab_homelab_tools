@@ -171,6 +171,32 @@ python -m pytest tests/ -k "not remote" -v
 - Import common utilities for consistent UI
 - Handle both local and remote operations
 
+### Testing and Quality Requirements
+
+**CRITICAL**: Before any commit, you MUST:
+
+1. **Run the full test suite**:
+   ```bash
+   python -m pytest tests/ -v
+   ```
+
+2. **Run pre-commit hooks** (handles formatting, linting, etc.):
+   ```bash
+   pre-commit run --all-files
+   ```
+
+3. **Verify all tests pass locally** - CI failures often indicate issues that could be caught locally
+
+**Why this matters**: We've experienced multiple CI failures due to:
+- Formatting issues that pre-commit would have caught
+- Test failures that could have been detected locally
+- Configuration conflicts between development and CI environments
+
+**Testing Configuration Notes**:
+- Some tests use `patch` to disable config file discovery for consistent results
+- Tests that instantiate `Settings()` may need patching if they expect default values
+- Always test configuration changes with both discovery enabled and disabled
+
 ### Bridge Development
 The BridgeManager supports multiple creation patterns:
 
