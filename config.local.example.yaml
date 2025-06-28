@@ -1,5 +1,13 @@
 # Example Local Configuration Override
 # Copy this file to config.local.yaml and customize for your local development
+#
+# Configuration File Discovery Order:
+# 1. CLAB_CONFIG_FILE environment variable
+# 2. ./clab_tools_files/config.yaml (project-specific)
+# 3. ./config.local.yaml (local override)
+# 4. Installation directory config.yaml (default)
+#
+# This file shows all available configuration options with examples
 
 # Database settings - customize for your local environment
 database:
@@ -31,6 +39,21 @@ debug: true                            # Enable debug mode for development
 lab:
   current_lab: "dev"                   # Default lab for development
   auto_create_lab: true                # Automatically create lab if it doesn't exist
+  use_global_database: false           # Use global database instead of current directory
+  global_database_path: null           # Path to global database directory
+
+# Remote host settings - for deploying to remote containerlab hosts
+remote:
+  enabled: false                       # Enable remote host operations
+  host: "192.168.1.100"               # Remote host IP or hostname
+  port: 22                            # SSH port
+  username: "clab"                     # SSH username
+  # password: "password"               # SSH password (not recommended, use keys)
+  private_key_path: "~/.ssh/id_rsa"   # SSH private key file path
+  topology_remote_dir: "/tmp/clab-topologies"  # Remote directory for topology files
+  timeout: 30                          # SSH connection timeout in seconds
+  use_sudo: true                       # Use sudo for bridge management commands
+  # sudo_password: "sudo_pass"         # Sudo password (if different from SSH password)
 
 # Example: Override specific settings for different use cases
 #

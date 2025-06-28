@@ -1,40 +1,37 @@
-# Clab Tools Configuration File
-# YAML configuration for containerlab tools
-
-# Database settings
 database:
-  # url: "sqlite:///custom_path.db"  # Uncomment to override default package directory location
-  echo: false                        # Enable SQL echo for debugging
-  pool_pre_ping: true               # Enable connection pool health checks
-
-# Logging settings
+  url: sqlite:////Users/colburnm/Documents/python_dev/clab_homelab_tools/clab_topology.db
+  echo: false
+  pool_pre_ping: true
 logging:
-  level: "INFO"                     # Log level: DEBUG, INFO, WARNING, ERROR, CRITICAL
-  format: "console"                 # Log format: json, console
-  file_path: null                   # Optional log file path
-  max_file_size: 10485760          # Max log file size (10MB)
-  backup_count: 5                  # Number of backup log files
-
-# Topology generation settings
+  level: INFO
+  format: console
+  file_path: null
+  max_file_size: 10485760
+  backup_count: 5
 topology:
-  default_prefix: "clab"           # Default topology prefix
-  default_topology_name: "homelab" # Default topology name
-  default_mgmt_network: "clab"     # Default management network name
-  default_mgmt_subnet: "172.20.20.0/24"  # Default management subnet
-  template_path: "topology_template.j2"  # Path to Jinja2 template
-  output_dir: "."                  # Output directory for generated files
-
-# Lab management settings
+  default_prefix: clab
+  default_topology_name: homelab
+  default_mgmt_network: clab
+  default_mgmt_subnet: 172.20.20.0/24
+  template_path: topology_template.j2
+  output_dir: .
+bridges:
+  bridge_prefix: clab-br
+  cleanup_on_exit: false
+remote:
+  enabled: false
+  host: null
+  port: 22
+  username: null
+  password: null
+  private_key_path: null
+  topology_remote_dir: /tmp/clab-topologies
+  timeout: 30
+  use_sudo: true
+  sudo_password: null
 lab:
-  current_lab: "default"
+  current_lab: test_persistence
   use_global_database: false
   global_database_path: null
   auto_create_lab: true
-
-# Bridge management settings
-bridges:
-  bridge_prefix: "clab-br"         # Prefix for created bridges
-  cleanup_on_exit: false           # Auto-cleanup bridges on exit
-
-# General settings
-debug: false                       # Enable debug mode globally
+debug: true

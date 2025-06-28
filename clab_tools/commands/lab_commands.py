@@ -105,7 +105,13 @@ def switch(ctx, lab_name: str):
     settings.lab.current_lab = lab_name
     ctx.obj["current_lab"] = lab_name
 
-    handle_success(f"Switched to lab '{lab_name}'")
+    # Save settings to persist the change
+    if settings.save_to_file():
+        handle_success(f"Switched to lab '{lab_name}'")
+    else:
+        handle_success(
+            f"Switched to lab '{lab_name}' (warning: could not persist setting)"
+        )
 
     # Show lab stats
     stats = db.get_lab_stats(lab_name)

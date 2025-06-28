@@ -1,6 +1,46 @@
 # Configuration Guide
 
-This guide covers all configuration options for clab-tools, including project settings, node configurations, and environment customization.
+This guide covers all configuration options for clab-tools, including automatic configuration discovery, persistence settings, and environment customization.
+
+## Configuration File Discovery
+
+clab-tools automatically discovers configuration files using a priority-based system. This eliminates the need to specify `--config` on every command.
+
+### Discovery Order
+
+Configuration files are discovered in the following priority order:
+
+1. **Environment Variable**: `CLAB_CONFIG_FILE`
+   - Highest priority, allows complete override
+   - `export CLAB_CONFIG_FILE="/path/to/custom-config.yaml"`
+
+2. **Project-Specific**: `./clab_tools_files/config.yaml`
+   - Project-specific configuration stored with your project
+   - Committed to version control for team sharing
+   - Perfect for project-specific settings like lab names, prefixes, etc.
+
+3. **Local Override**: `./config.local.yaml`
+   - Local developer overrides (typically not committed)
+   - Copy from `config.local.example.yaml` and customize
+   - Use for personal preferences, local database paths, etc.
+
+4. **Installation Default**: `config.yaml` (in installation directory)
+   - System-wide defaults
+   - Updated during tool upgrades
+
+### Using Project-Specific Configuration
+
+Create a `clab_tools_files/` directory in your project:
+
+```bash
+mkdir clab_tools_files
+cp config.local.example.yaml clab_tools_files/config.yaml
+# Edit clab_tools_files/config.yaml for your project
+git add clab_tools_files/config.yaml
+git commit -m "Add project-specific clab-tools configuration"
+```
+
+Team members will automatically use the same settings when they run clab-tools.
 
 ## Configuration Files
 
@@ -63,14 +103,45 @@ bridges:
 
 | Setting | Description | Default | Example |
 |---------|-------------|---------|---------|
-| `database.url` | Database URL | Project directory | `"sqlite:///custom_path.db"` |
+| `database.url` | Database URL | Installation directory | `"sqlite:///custom_path.db"` |
 | `database.echo` | Enable SQL logging | `false` | `true` |
 | `database.pool_pre_ping` | Connection health checks | `true` | `false` |
 
 **Database Location:**
-- **Default**: Database file (`clab_topology.db`) is created in the project directory
-- **Consistent**: Same location regardless of where you run `clab-tools` from
-- **Override**: Set `database.url` in config or use `--db-url` CLI option
+- **Default**: Database file (`clab_topology.db`) is created in the tool's installation directory
+- **Consistent**: Same database location regardless of your current working directory
+- **Portable**: Can be overridden per project using config files
+- **Override**: Set `database.url` in config or use environment variable `CLAB_DB_URL`
+
+**Example Database Configurations:**
+
+```yaml
+# Use project-specific database
+database:
+  url: "sqlite:///./project_lab.db"
+
+# Use global database for all projects
+database:
+  url: "sqlite:////home/user/.clab/global.db"
+
+# Use PostgreSQL for production
+database:
+  url: "postgresql://user:pass@localhost:5432/clab_db"
+```
+
+### Lab Settings
+
+| Setting | Description | Default | Example |
+|---------|-------------|---------|---------|
+| `lab.current_lab` | Active lab name | `"default"` | `"production"` |
+| `lab.auto_create_lab` | Auto-create missing labs | `true` | `false` |
+| `lab.use_global_database` | Use global database | `false` | `true` |
+| `lab.global_database_path` | Global database directory | `null` | `"/home/user/.clab"` |
+
+**Lab Isolation:**
+- Each lab maintains separate nodes, connections, and topologies
+- Lab switching persists across command invocations
+- Labs are automatically created when first accessed (if `auto_create_lab` is true)
 
 ### Node Defaults
 
@@ -104,16 +175,53 @@ remote_hosts:
     sudo: true                 # Require sudo (optional, default: false)
 ```
 
+## Lab Management and Persistence
+
+clab-tools provides persistent lab switching that survives across command invocations.
+
+### Lab Switching
+
+```bash
+# Switch to a different lab (persists across commands)
+clab-tools lab switch production
+
+# All subsequent commands use the 'production' lab
+clab-tools data show
+clab-tools topology generate
+```
+
+### Lab Settings Persistence
+
+When you switch labs, the setting is automatically saved to your configuration file:
+
+- **Project config exists**: Saves to `./clab_tools_files/config.yaml`
+- **Local config exists**: Saves to `./config.local.yaml`
+- **No config exists**: Creates `./config.local.yaml`
+- **Environment config**: Saves to the file specified by `CLAB_CONFIG_FILE`
+
+This ensures your lab selection persists across terminal sessions and command invocations.
+
 ## Environment Variables
 
-Override configuration using environment variables:
+Override any configuration setting using environment variables with the `CLAB_` prefix:
 
 | Variable | Description | Example |
 |----------|-------------|---------|
-| `CLAB_PROJECT_NAME` | Override project name | `export CLAB_PROJECT_NAME="test-lab"` |
-| `CLAB_DEFAULT_IMAGE` | Override default image | `export CLAB_DEFAULT_IMAGE="alpine:3.18"` |
-| `CLAB_MGMT_NETWORK` | Override management network | `export CLAB_MGMT_NETWORK="lab-mgmt"` |
-| `CLAB_CONFIG_FILE` | Use alternate config file | `export CLAB_CONFIG_FILE="./prod-config.yaml"` |
+| `CLAB_CONFIG_FILE` | Override config file discovery | `export CLAB_CONFIG_FILE="./prod-config.yaml"` |
+| `CLAB_DEBUG` | Enable debug mode | `export CLAB_DEBUG=true` |
+| `CLAB_DB_URL` | Override database URL | `export CLAB_DB_URL="sqlite:///custom.db"` |
+| `CLAB_LAB_CURRENT_LAB` | Override current lab | `export CLAB_LAB_CURRENT_LAB="test-lab"` |
+| `CLAB_TOPOLOGY_DEFAULT_PREFIX` | Override topology prefix | `export CLAB_TOPOLOGY_DEFAULT_PREFIX="mylab"` |
+| `CLAB_LOG_LEVEL` | Override log level | `export CLAB_LOG_LEVEL=DEBUG` |
+
+### Environment Variable Naming
+
+Environment variables follow the pattern `CLAB_<SECTION>_<SETTING>`:
+
+- `CLAB_DATABASE_URL` → `database.url`
+- `CLAB_LAB_CURRENT_LAB` → `lab.current_lab`
+- `CLAB_TOPOLOGY_DEFAULT_PREFIX` → `topology.default_prefix`
+- `CLAB_REMOTE_HOST` → `remote.host`
 
 ## Node-Specific Configuration
 
@@ -152,6 +260,78 @@ clab-tools validates configuration on startup:
 ./clab-tools.sh remote test-connection lab-server-1
 ```
 
+## Configuration Examples
+
+### Example: Development Configuration
+
+Create `config.local.yaml` for personal development settings:
+
+```yaml
+# Personal development overrides
+database:
+  url: "sqlite:///./dev_lab.db"
+  echo: true  # Enable SQL debugging
+
+logging:
+  level: "DEBUG"
+  format: "console"
+
+topology:
+  default_prefix: "mydev"
+  default_mgmt_subnet: "172.25.0.0/24"
+  output_dir: "./my_outputs"
+
+lab:
+  current_lab: "development"
+  auto_create_lab: true
+
+debug: true
+```
+
+### Example: Project-Specific Configuration
+
+Create `clab_tools_files/config.yaml` for team-shared settings:
+
+```yaml
+# Project team configuration
+topology:
+  default_prefix: "datacenter-sim"
+  default_topology_name: "dc_lab"
+  default_mgmt_network: "dc-mgmt"
+  default_mgmt_subnet: "10.100.0.0/16"
+
+bridges:
+  bridge_prefix: "dc-br"
+  cleanup_on_exit: false
+
+lab:
+  current_lab: "datacenter_topology"
+  auto_create_lab: true
+
+remote:
+  enabled: true
+  host: "lab-server.company.com"
+  username: "labuser"
+  private_key_path: "~/.ssh/lab_rsa"
+```
+
+### Example: Production Configuration
+
+Use environment variables for production deployments:
+
+```bash
+# Production environment
+export CLAB_CONFIG_FILE="/etc/clab-tools/production.yaml"
+export CLAB_DB_URL="postgresql://clab:password@db.company.com:5432/production_lab"
+export CLAB_LOG_LEVEL="INFO"
+export CLAB_LOG_FORMAT="json"
+export CLAB_LOG_FILE_PATH="/var/log/clab-tools.log"
+
+# Run commands
+clab-tools lab switch production_spine_leaf
+clab-tools topology generate
+```
+
 ## Common Patterns
 
 ### Multi-Environment Setup
@@ -159,12 +339,36 @@ clab-tools validates configuration on startup:
 Use different config files for different environments:
 
 ```bash
-# Development
+# Development (automatic discovery)
 cp config.local.example.yaml config.local.yaml
+clab-tools lab switch dev
+
+# Staging
+export CLAB_CONFIG_FILE="./staging-config.yaml"
+clab-tools lab switch staging
 
 # Production
 export CLAB_CONFIG_FILE="./prod-config.yaml"
-./clab-tools.sh topology generate
+clab-tools lab switch production
+```
+
+### Team Configuration Sharing
+
+```bash
+# Set up project configuration for team
+mkdir clab_tools_files
+cp config.local.example.yaml clab_tools_files/config.yaml
+
+# Edit for project-specific settings
+vim clab_tools_files/config.yaml
+
+# Commit to share with team
+git add clab_tools_files/
+git commit -m "Add shared lab configuration"
+
+# Team members automatically inherit settings
+git pull
+clab-tools lab list  # Uses shared config automatically
 ```
 
 ### Shared Bridge Configuration
@@ -189,17 +393,63 @@ bridges:
 
 ## Troubleshooting
 
-### Configuration Issues
+### Configuration Discovery Issues
 
 ```bash
-# Check configuration syntax
-./clab-tools.sh --help
+# Check which config file is being used
+clab-tools --help  # Shows config file in use
 
-# Show resolved configuration
-./clab-tools.sh remote show-config --verbose
+# Override config file for testing
+export CLAB_CONFIG_FILE="./test-config.yaml"
+clab-tools lab current
 
 # Reset to defaults
-cp config.local.example.yaml config.local.yaml
+rm config.local.yaml  # Remove local overrides
+rm -rf clab_tools_files/  # Remove project config
+```
+
+### Lab Persistence Issues
+
+```bash
+# Check current lab setting
+clab-tools lab current
+
+# Verify config file contains lab setting
+cat config.local.yaml  # or your active config file
+grep -A2 "lab:" config.local.yaml
+
+# Force lab switch with explicit save
+clab-tools lab switch test_lab
+cat config.local.yaml  # Should show updated lab
+```
+
+### Database Location Issues
+
+```bash
+# Check effective database path
+clab-tools data show  # Will show database location on error
+
+# Override database for testing
+export CLAB_DB_URL="sqlite:///./test.db"
+clab-tools data show
+
+# Reset to default location
+unset CLAB_DB_URL
+rm config.local.yaml
+```
+
+### Environment Variable Issues
+
+```bash
+# Show all CLAB environment variables
+env | grep CLAB_
+
+# Test specific override
+export CLAB_DEBUG=true
+clab-tools lab current
+
+# Clear all CLAB variables
+env | grep CLAB_ | cut -d= -f1 | xargs unset
 ```
 
 ### Remote Host Issues

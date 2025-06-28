@@ -26,7 +26,35 @@ clab-tools --help
 The install script creates:
 - Python virtual environment in the project directory (`.venv/`)
 - CLI symlink at `/usr/local/bin/clab-tools` pointing to the project
-- Database file in the project directory (`clab_topology.db`)
+- Database file in the installation directory (`clab_topology.db`)
+
+## Configuration Discovery
+
+clab-tools automatically discovers configuration files in this order:
+
+1. **Environment Variable**: `CLAB_CONFIG_FILE=/path/to/config.yaml`
+2. **Project-Specific**: `./clab_tools_files/config.yaml` (for team sharing)
+3. **Local Override**: `./config.local.yaml` (for personal settings)
+4. **Installation Default**: Uses built-in defaults
+
+This means you don't need to specify `--config` on every command!
+
+### Quick Configuration Setup
+
+```bash
+# Option 1: Create personal local overrides
+cp config.local.example.yaml config.local.yaml
+# Edit config.local.yaml for your preferences
+
+# Option 2: Create project-specific configuration (recommended for teams)
+mkdir clab_tools_files
+cp config.local.example.yaml clab_tools_files/config.yaml
+# Edit clab_tools_files/config.yaml for project settings
+# Commit this file to share settings with your team
+
+# Option 3: Use environment variable for one-off configs
+export CLAB_CONFIG_FILE="./special-config.yaml"
+```
 
 ## First Lab
 
@@ -36,9 +64,13 @@ The install script creates:
 # Create your first lab
 clab-tools lab create tutorial -d "My first lab"
 
-# Verify lab was created
+# The lab switch is automatically saved and persists!
+# Verify lab was created and is active
 clab-tools lab list
 clab-tools lab current
+
+# Note: Lab switching now persists across command invocations
+# You don't need to specify the lab on each command
 ```
 
 ### 2. Prepare CSV Data

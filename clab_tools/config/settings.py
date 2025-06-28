@@ -5,6 +5,7 @@ Handles application configuration using Pydantic for validation.
 Supports loading from environment variables and configuration files.
 """
 
+import os
 from pathlib import Path
 from typing import Any, Dict, Optional
 
@@ -20,6 +21,37 @@ def get_default_database_path() -> str:
     # Create the database path in the package root directory
     db_path = package_dir / "clab_topology.db"
     return f"sqlite:///{db_path.absolute()}"
+
+
+def find_config_file() -> Optional[str]:
+    """Find configuration file using priority order:
+    1. CLAB_CONFIG_FILE environment variable
+    2. ./clab_tools_files/config.yaml (project-specific)
+    3. ./config.local.yaml (local override)
+    4. Installation directory config.yaml (default)
+    """
+    # 1. Check environment variable
+    env_config = os.getenv("CLAB_CONFIG_FILE")
+    if env_config and Path(env_config).exists():
+        return env_config
+
+    # 2. Check project-specific config
+    project_config = Path("clab_tools_files/config.yaml")
+    if project_config.exists():
+        return str(project_config)
+
+    # 3. Check local override
+    local_config = Path("config.local.yaml")
+    if local_config.exists():
+        return str(local_config)
+
+    # 4. Default to installation directory config
+    package_dir = Path(__file__).parent.parent.parent
+    default_config = package_dir / "config.yaml"
+    if default_config.exists():
+        return str(default_config)
+
+    return None
 
 
 class DatabaseSettings(BaseSettings):
@@ -190,6 +222,11 @@ class Settings(BaseSettings):
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
+
+        # Auto-detect config file if not explicitly provided
+        if not self.config_file:
+            self.config_file = find_config_file()
+
         if self.config_file and Path(self.config_file).exists():
             self._load_from_file(self.config_file)
 
@@ -227,6 +264,34 @@ class Settings(BaseSettings):
             "debug": self.debug,
             "config_file": self.config_file,
         }
+
+    def save_to_file(self, config_path: Optional[str] = None) -> bool:
+        """Save current settings to YAML file.
+
+        Args:
+            config_path: Optional path to save to. If None, uses the config file
+                        that was loaded, or creates config.local.yaml.
+        """
+        if config_path is None:
+            if self.config_file:
+                config_path = self.config_file
+            else:
+                # Create config.local.yaml as default
+                config_path = "config.local.yaml"
+
+        try:
+            # Convert settings to dict, excluding config_file from output
+            config_data = self.to_dict()
+            config_data.pop("config_file", None)
+
+            # Save to file
+            with open(config_path, "w") as f:
+                yaml.dump(config_data, f, default_flow_style=False, sort_keys=False)
+
+            return True
+        except Exception as e:
+            print(f"Warning: Could not save config file {config_path}: {e}")
+            return False
 
 
 # Global settings instance
