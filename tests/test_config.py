@@ -1,6 +1,7 @@
 """Tests for configuration settings."""
 
 import os
+from unittest.mock import patch
 
 import pytest
 
@@ -80,12 +81,14 @@ class TestSettings:
 
     def test_default_values(self):
         """Test default application settings."""
-        settings = Settings()
-        assert isinstance(settings.database, DatabaseSettings)
-        assert isinstance(settings.logging, LoggingSettings)
-        assert isinstance(settings.topology, TopologySettings)
-        assert isinstance(settings.bridges, BridgeSettings)
-        assert settings.debug is False
+        # Disable config file discovery to test actual defaults
+        with patch("clab_tools.config.settings.find_config_file", return_value=None):
+            settings = Settings()
+            assert isinstance(settings.database, DatabaseSettings)
+            assert isinstance(settings.logging, LoggingSettings)
+            assert isinstance(settings.topology, TopologySettings)
+            assert isinstance(settings.bridges, BridgeSettings)
+            assert settings.debug is False
 
     def test_config_file_loading(self, temp_dir):
         """Test loading configuration from YAML file."""
@@ -127,8 +130,10 @@ debug: true
 
     def test_to_dict(self):
         """Test converting settings to dictionary."""
-        settings = Settings()
-        config_dict = settings.to_dict()
+        # Use patch to ensure consistent test results regardless of config files
+        with patch("clab_tools.config.settings.find_config_file", return_value=None):
+            settings = Settings()
+            config_dict = settings.to_dict()
 
         assert "database" in config_dict
         assert "logging" in config_dict
@@ -148,8 +153,10 @@ class TestGlobalSettings:
 
     def test_initialize_settings(self):
         """Test initializing settings with custom values."""
-        custom_settings = initialize_settings(debug=True)
-        assert custom_settings.debug is True
+        # Disable config discovery to test parameter override
+        with patch("clab_tools.config.settings.find_config_file", return_value=None):
+            custom_settings = initialize_settings(debug=True)
+            assert custom_settings.debug is True
 
         # get_settings should return the initialized instance
         settings = get_settings()
