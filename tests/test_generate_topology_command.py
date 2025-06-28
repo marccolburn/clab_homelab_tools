@@ -25,8 +25,8 @@ class TestGenerateTopologyCommand:
             ("router1", "eth0", "switch1", "eth1"),
         ]
 
-    @patch("clab_tools.commands.generate_topology.get_settings")
-    @patch("clab_tools.commands.generate_topology.TopologyGenerator")
+    @patch("clab_tools.commands.topology_commands.get_settings")
+    @patch("clab_tools.commands.topology_commands.TopologyGenerator")
     def test_uses_config_default_topology_name(
         self, mock_generator_class, mock_get_settings
     ):
@@ -67,8 +67,8 @@ class TestGenerateTopologyCommand:
                 if os.path.exists(tmp_file.name):
                     os.unlink(tmp_file.name)
 
-    @patch("clab_tools.commands.generate_topology.get_settings")
-    @patch("clab_tools.commands.generate_topology.TopologyGenerator")
+    @patch("clab_tools.commands.topology_commands.get_settings")
+    @patch("clab_tools.commands.topology_commands.TopologyGenerator")
     def test_uses_explicit_topology_name(self, mock_generator_class, mock_get_settings):
         """Test that command uses explicit topology name when provided."""
         # Mock settings
@@ -108,8 +108,8 @@ class TestGenerateTopologyCommand:
                 if os.path.exists(tmp_file.name):
                     os.unlink(tmp_file.name)
 
-    @patch("clab_tools.commands.generate_topology.get_settings")
-    @patch("clab_tools.commands.generate_topology.TopologyGenerator")
+    @patch("clab_tools.commands.topology_commands.get_settings")
+    @patch("clab_tools.commands.topology_commands.TopologyGenerator")
     def test_uses_config_default_prefix_when_none(
         self, mock_generator_class, mock_get_settings
     ):
@@ -150,8 +150,8 @@ class TestGenerateTopologyCommand:
                 if os.path.exists(tmp_file.name):
                     os.unlink(tmp_file.name)
 
-    @patch("clab_tools.commands.generate_topology.get_settings")
-    @patch("clab_tools.commands.generate_topology.TopologyGenerator")
+    @patch("clab_tools.commands.topology_commands.get_settings")
+    @patch("clab_tools.commands.topology_commands.TopologyGenerator")
     def test_handles_prefix_none(self, mock_generator_class, mock_get_settings):
         """Test that command handles 'none' prefix correctly."""
         # Mock settings
@@ -190,8 +190,8 @@ class TestGenerateTopologyCommand:
                 if os.path.exists(tmp_file.name):
                     os.unlink(tmp_file.name)
 
-    @patch("clab_tools.commands.generate_topology.get_settings")
-    @patch("clab_tools.commands.generate_topology.TopologyGenerator")
+    @patch("clab_tools.commands.topology_commands.get_settings")
+    @patch("clab_tools.commands.topology_commands.TopologyGenerator")
     def test_exits_when_no_nodes(self, mock_generator_class, mock_get_settings):
         """Test that command exits when no nodes are found in database."""
         # Mock settings
