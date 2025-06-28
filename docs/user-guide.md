@@ -54,6 +54,161 @@ containerlab deploy -t clab-topology.yaml
 ./clab-tools.sh remote deploy lab-server-1
 ```
 
+## Quick Start with Bootstrap
+
+The bootstrap command provides a one-command setup for your entire lab:
+
+```bash
+# Complete lab setup from CSV files
+clab-tools lab bootstrap -n nodes.csv -c connections.csv -o lab.yml
+
+# Bootstrap without starting (prepare only)
+clab-tools lab bootstrap -n nodes.csv -c connections.csv -o lab.yml --no-start
+
+# Bootstrap in quiet mode for automation
+clab-tools --quiet lab bootstrap -n nodes.csv -c connections.csv -o lab.yml
+```
+
+This single command will:
+1. Import your CSV data
+2. Generate the topology file
+3. Upload to remote host (if configured)
+4. Create required bridges
+5. Start the containerlab topology
+6. Configure VLANs on bridges
+
+To tear down the lab:
+
+```bash
+# Complete teardown
+clab-tools lab teardown -t lab.yml
+
+# Teardown but keep data
+clab-tools lab teardown -t lab.yml --keep-data
+```
+
+## Scripting and Automation
+
+### Using Quiet Mode
+
+The `--quiet` flag suppresses all interactive prompts, making commands suitable for scripts:
+
+```bash
+# Non-interactive lab creation
+clab-tools --quiet lab create production
+
+# Force delete without prompts
+clab-tools --quiet lab delete old-lab --force
+
+# Clear data without confirmation
+clab-tools --quiet data clear --force
+
+# Bootstrap without any prompts
+clab-tools --quiet lab bootstrap -n nodes.csv -c connections.csv -o lab.yml
+```
+
+### Example Automation Script
+
+```bash
+#!/bin/bash
+set -e
+
+# Set quiet mode for all commands
+export CLAB_QUIET=true
+
+# Create and setup lab
+clab-tools lab create automated-lab
+clab-tools lab switch automated-lab
+clab-tools lab bootstrap -n nodes.csv -c connections.csv -o topology.yml
+
+# Upload configurations to nodes
+clab-tools node upload --all --source init-config.sh --dest /tmp/init.sh
+clab-tools node upload --kind srx --source juniper.conf --dest /etc/juniper.conf
+
+# Run commands on remote host
+clab-tools remote execute "sudo clab inspect"
+```
+
+## Node Management
+
+### Uploading Files to Nodes
+
+Upload files directly to containerlab nodes using their management IPs:
+
+```bash
+# Upload to specific node
+clab-tools node upload --node router1 --source config.txt --dest /tmp/config.txt
+
+# Upload to all nodes of a kind
+clab-tools node upload --kind linux --source startup.sh --dest /opt/startup.sh
+
+# Upload to multiple specific nodes
+clab-tools node upload --nodes r1,r2,r3 --source update.sh --dest /tmp/update.sh
+
+# Upload to all nodes in the lab
+clab-tools node upload --all --source banner.txt --dest /etc/banner
+
+# Upload directory recursively
+clab-tools node upload --node server1 --source-dir ./configs --dest /etc/app/
+```
+
+### Node Authentication
+
+Configure default node credentials in your config file:
+
+```yaml
+# config.local.yaml
+node:
+  default_username: admin
+  default_password: admin123  # Warning: Use SSH keys instead
+  private_key_path: ~/.ssh/lab_key
+  ssh_port: 22
+```
+
+Or override per command:
+
+```bash
+# Use specific credentials
+clab-tools node upload --node switch1 --source config.txt --dest /tmp/config.txt \
+  --user netadmin --password secret
+
+# Use specific SSH key
+clab-tools node upload --all --source init.sh --dest /tmp/init.sh \
+  --private-key ~/.ssh/special_key
+```
+
+## Topology Lifecycle Management
+
+### Starting and Stopping Topologies
+
+The new start/stop commands simplify topology management:
+
+```bash
+# Start topology locally (default)
+clab-tools topology start lab.yml
+
+# Start on remote host
+clab-tools topology start lab.yml --remote
+
+# Stop topology
+clab-tools topology stop lab.yml
+
+# Use custom path
+clab-tools topology start lab.yml --path /custom/topologies/lab.yml
+```
+
+### Local vs Remote Execution
+
+By default, start/stop commands run locally. When remote host is configured:
+
+```bash
+# Force local execution even with remote configured
+clab-tools --enable-remote topology start lab.yml --local
+
+# Force remote execution
+clab-tools topology start lab.yml --remote
+```
+
 ## Multi-Lab Management
 
 ### Lab Operations

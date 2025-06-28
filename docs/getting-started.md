@@ -28,6 +28,25 @@ The install script creates:
 - CLI symlink at `/usr/local/bin/clab-tools` pointing to the project
 - Database file in the installation directory (`clab_topology.db`)
 
+### Essential Configuration (Important!)
+
+Before proceeding with any examples, review and customize the configuration for your environment:
+
+```bash
+# Create a local configuration from the example
+cp config.local.example.yaml config.local.yaml
+
+# Edit to match your environment
+# Key settings to review:
+# - bridges: Update interface names to match your system
+# - remote: Configure if using remote deployment
+# - node: Set default credentials for your devices
+# - defaults: Adjust container images and network settings
+vim config.local.yaml
+```
+
+**Note**: The default `config.yaml` contains example settings that likely won't match your environment. Creating a `config.local.yaml` ensures your settings override the defaults without modifying the original file.
+
 ## Configuration Discovery
 
 clab-tools automatically discovers configuration files in this order:
@@ -58,7 +77,36 @@ export CLAB_CONFIG_FILE="./special-config.yaml"
 
 ## First Lab
 
-### 1. Create Lab Environment
+### Quick Start with Bootstrap
+
+**Prerequisites**: Ensure you've created and customized your `config.local.yaml` file (see Essential Configuration above).
+
+The fastest way to get started is using the bootstrap command:
+
+```bash
+# Complete lab setup in one command
+clab-tools lab bootstrap -n nodes.csv -c connections.csv -o tutorial.yml
+
+# This single command will:
+# 1. Create and switch to a new lab (if needed)
+# 2. Import your CSV data
+# 3. Generate the topology file
+# 4. Create required bridges
+# 5. Start the containerlab topology
+# 6. Configure VLANs on bridge interfaces
+```
+
+**Note**: The bootstrap command uses settings from your configuration file, including:
+- Bridge names and interfaces
+- Default container images
+- Management network settings
+- Remote host settings (if configured)
+
+### Manual Setup (Step-by-Step)
+
+For more control, you can set up your lab manually:
+
+#### 1. Create Lab Environment
 
 ```bash
 # Create your first lab
@@ -114,21 +162,69 @@ clab-tools topology generate -o tutorial.yml -t "tutorial-lab"
 # Create required bridges (requires sudo)
 sudo clab-tools bridge create
 
-# Deploy with containerlab
-sudo clab deploy -t tutorial.yml
+# Start the topology (simplified command)
+clab-tools topology start tutorial.yml
+# Or deploy with containerlab directly: sudo clab deploy -t tutorial.yml
+
+# Configure VLAN forwarding on bridge interfaces (important!)
+sudo clab-tools bridge configure
 ```
 
-### 5. Cleanup
+**Note**: The `bridge configure` command sets up VLAN forwarding on the bridge interfaces, which is essential for proper communication between nodes. Without this step, VLANs won't be forwarded correctly between your containerlab nodes.
+
+### 5. Upload Configuration to Nodes
+
+After your topology is running, you can upload configurations to nodes:
 
 ```bash
-# Destroy containerlab topology
-sudo clab destroy -t tutorial.yml
+# Upload initial config to a specific node
+clab-tools node upload --node r1 --source router-config.txt --dest /tmp/config.txt
+
+# Upload startup script to all nodes
+clab-tools node upload --all --source init.sh --dest /tmp/init.sh
+
+# Upload configs to all routers
+clab-tools node upload --kind juniper_vjunosrouter --source juniper.conf --dest /etc/juniper.conf
+```
+
+### 6. Cleanup
+
+```bash
+# Teardown everything with one command
+clab-tools lab teardown -t tutorial.yml
+
+# Or cleanup manually:
+# Stop the topology
+clab-tools topology stop tutorial.yml
 
 # Remove bridges
 sudo clab-tools bridge cleanup
 
 # Remove lab data
 clab-tools lab delete tutorial
+```
+
+## Scripting and Automation
+
+For automated deployments, use the `--quiet` flag:
+
+```bash
+# Non-interactive bootstrap
+clab-tools --quiet lab bootstrap -n nodes.csv -c connections.csv -o lab.yml
+
+# Non-interactive teardown
+clab-tools --quiet lab teardown -t lab.yml
+
+# Script example
+#!/bin/bash
+set -e
+
+# Set quiet mode for all commands
+export CLAB_QUIET=true
+
+clab-tools lab create automated-lab
+clab-tools lab bootstrap -n nodes.csv -c connections.csv -o topology.yml
+clab-tools node upload --all --source startup.sh --dest /tmp/startup.sh
 ```
 
 ## Next Steps

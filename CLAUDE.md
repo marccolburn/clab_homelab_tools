@@ -2,6 +2,62 @@
 
 This document provides a comprehensive guide to the clab-tools codebase for AI assistants working on this project.
 
+## CURRENT TASK STATUS (Updated 2025-06-28)
+
+Working on feature branch: `feature/scripting-and-automation`
+
+### ✅ Completed Features:
+1. **Global `--quiet` flag** for non-interactive scripting
+2. **`topology start/stop` commands** with local-first behavior
+3. **`node upload` command** for file/directory uploads to nodes
+4. **`lab bootstrap/teardown` commands** for complete workflows
+
+### ✅ Documentation Updates (ALL COMPLETED):
+- commands.md: Added all new commands with examples
+- user-guide.md: Added scripting, node management, lifecycle sections
+- configuration.md: Added node settings, environment variables
+- getting-started.md: Added bootstrap quick start, config prerequisites
+- remote-setup.md: Added start/stop remote behavior, node uploads
+
+### 🔴 CRITICAL - Remaining Tasks:
+**Write comprehensive tests for all new features:**
+
+1. **test_quiet_mode.py**
+   - Test lab create/delete/switch without prompts
+   - Test data clear with --quiet
+   - Verify all interactive prompts are suppressed
+
+2. **test_start_stop_commands.py**
+   - Test local execution (default)
+   - Test remote execution (--remote flag)
+   - Test path overrides (--path option)
+   - Test conflict handling
+   - Mock subprocess.run calls
+
+3. **test_node_upload.py**
+   - Test all target options (--node, --kind, --nodes, --all)
+   - Test file and directory uploads
+   - Test authentication methods
+   - Mock paramiko SSH and scp operations
+
+4. **test_bootstrap_teardown.py**
+   - Test complete workflows
+   - Test skip options (--no-start, --skip-vlans)
+   - Test dry-run mode
+   - Mock subprocess calls to other commands
+
+5. **Run full test suite and pre-commit**
+   ```bash
+   python -m pytest tests/ -v
+   pre-commit run --all-files
+   ```
+
+### Key Implementation Details:
+- Commands check `ctx.obj.get("quiet", False)` for quiet mode
+- Start/stop use `get_containerlab_command()` from utils
+- NodeManager in `clab_tools/node/manager.py` handles SSH/SCP
+- Bootstrap/teardown use `subprocess.run` with context preservation
+
 ## Project Overview
 
 Clab-tools is a CLI tool for managing containerlab network topologies with multi-lab support, persistent storage, and remote host deployment capabilities.

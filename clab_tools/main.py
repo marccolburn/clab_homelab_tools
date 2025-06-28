@@ -7,6 +7,7 @@ persistent storage. This is the main entry point that coordinates all the
 different command modules.
 """
 
+import os
 import sys
 
 import click
@@ -104,6 +105,10 @@ def cli(
     # Override lab settings with command line arguments
     if lab:
         settings.lab.current_lab = lab
+
+    # Handle quiet mode from CLI or environment variable
+    if not quiet:
+        quiet = os.getenv("CLAB_QUIET", "").lower() in ("true", "1", "yes")
 
     # Override remote settings with command line arguments
     if enable_remote or remote_host:
