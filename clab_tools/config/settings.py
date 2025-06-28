@@ -71,6 +71,7 @@ class DatabaseSettings(BaseSettings):
 class LoggingSettings(BaseSettings):
     """Logging configuration settings."""
 
+    enabled: bool = Field(default=True, description="Enable logging")
     level: str = Field(default="INFO", description="Log level")
     format: str = Field(default="json", description="Log format: json or console")
     file_path: Optional[str] = Field(default=None, description="Log file path")

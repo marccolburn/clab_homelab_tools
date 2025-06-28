@@ -16,6 +16,7 @@ database:
 
 # Logging settings - customize for your preferences
 logging:
+  enabled: true                        # Set to false to disable all logging
   level: "DEBUG"                       # Use DEBUG for development, INFO for normal use
   format: "console"                    # Use "console" for development, "json" for production
   # file_path: "/tmp/my_clab.log"      # Uncomment to log to file

@@ -248,6 +248,7 @@ Override any configuration setting using environment variables with the `CLAB_` 
 | `CLAB_DB_URL` | Override database URL | `export CLAB_DB_URL="sqlite:///custom.db"` |
 | `CLAB_LAB_CURRENT_LAB` | Override current lab | `export CLAB_LAB_CURRENT_LAB="test-lab"` |
 | `CLAB_TOPOLOGY_DEFAULT_PREFIX` | Override topology prefix | `export CLAB_TOPOLOGY_DEFAULT_PREFIX="mylab"` |
+| `CLAB_LOG_ENABLED` | Enable/disable logging | `export CLAB_LOG_ENABLED=false` |
 | `CLAB_LOG_LEVEL` | Override log level | `export CLAB_LOG_LEVEL=DEBUG` |
 | `CLAB_QUIET` | Enable quiet mode | `export CLAB_QUIET=true` |
 | `CLAB_NODE_DEFAULT_USERNAME` | Node SSH username | `export CLAB_NODE_DEFAULT_USERNAME="admin"` |

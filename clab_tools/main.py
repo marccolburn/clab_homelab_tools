@@ -124,11 +124,16 @@ def cli(
     if remote_key:
         settings.remote.private_key_path = remote_key
 
-    # Setup logging
-    setup_logging(settings.logging)
-    logger = get_logger(__name__)
-
-    logger.info("Starting clab-tools CLI", version=__version__, debug=settings.debug)
+    # Setup logging only if enabled
+    if settings.logging.enabled:
+        setup_logging(settings.logging)
+        logger = get_logger(__name__)
+        logger.info(
+            "Starting clab-tools CLI", version=__version__, debug=settings.debug
+        )
+    else:
+        # Get logger without setup - will use structlog defaults (no output)
+        logger = get_logger(__name__)
 
     # Initialize database manager (multi-lab first approach)
     try:
@@ -143,7 +148,8 @@ def cli(
 
         # Ensure current lab exists
         db_manager.get_or_create_lab(current_lab)
-        logger.info("Using lab context", lab=current_lab)
+        if settings.logging.enabled:
+            logger.info("Using lab context", lab=current_lab)
 
     except Exception as e:
         logger.error("Failed to initialize database", error=str(e))

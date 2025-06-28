@@ -25,9 +25,9 @@ topology:
     return str(topology_file)
 
 
-def test_bootstrap_command_help():
+def test_bootstrap_command_help(runner_with_no_logging):
     """Test that lab bootstrap command help works."""
-    runner = CliRunner()
+    runner = runner_with_no_logging
     result = runner.invoke(cli, ["lab", "bootstrap", "--help"])
 
     assert result.exit_code == 0
