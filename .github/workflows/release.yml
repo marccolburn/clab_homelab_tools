@@ -26,7 +26,7 @@ jobs:
       run: |
         python -m pip install --upgrade pip
         pip install -r requirements.txt
-        pip install pytest pytest-cov
+        pip install -r requirements-dev.txt
         # Install the package in development mode
         pip install -e .
 
@@ -38,10 +38,12 @@ jobs:
       run: |
         chmod +x clab-tools.sh
         chmod +x install-cli.sh
-        # Test basic functionality
-        python clab_tools/main.py import-csv -n example_nodes.csv -c example_connections.csv
-        python clab_tools/main.py show-data
-        python clab_tools/main.py generate-topology -o release_test.yml --validate
+        # Install CLI wrapper
+        ./install-cli.sh
+        # Test basic functionality with new command structure
+        clab-tools data import -n example_nodes.csv -c example_connections.csv
+        clab-tools data show
+        clab-tools topology generate -o release_test.yml --validate
 
     - name: Extract version from tag
       id: version
