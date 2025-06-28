@@ -165,14 +165,50 @@ bridges:
 
 ### Remote Host Configuration
 
+| Setting | Description | Default | Example |
+|---------|-------------|---------|---------|
+| `remote.enabled` | Enable remote operations | `false` | `true` |
+| `remote.host` | Remote host IP/hostname | `null` | `"192.168.1.100"` |
+| `remote.port` | SSH port | `22` | `2222` |
+| `remote.username` | SSH username | `null` | `"labuser"` |
+| `remote.password` | SSH password | `null` | `"secret"` |
+| `remote.private_key_path` | SSH private key path | `null` | `"~/.ssh/lab_key"` |
+| `remote.topology_remote_dir` | Remote topology directory | `"/tmp/clab-topologies"` | `"/home/user/topologies"` |
+| `remote.timeout` | Connection timeout (seconds) | `30` | `60` |
+| `remote.use_sudo` | Use sudo for commands | `true` | `false` |
+| `remote.sudo_password` | Sudo password | `null` | `"sudopass"` |
+
 ```yaml
-remote_hosts:
-  - name: "lab-server-1"       # Host identifier
-    host: "192.168.1.100"      # IP address or hostname
-    port: 22                   # SSH port (optional, default: 22)
-    user: "admin"              # SSH username
-    key_file: "~/.ssh/lab_key" # SSH private key path
-    sudo: true                 # Require sudo (optional, default: false)
+# Example remote configuration
+remote:
+  enabled: true
+  host: "lab-server.company.com"
+  username: "labuser"
+  private_key_path: "~/.ssh/lab_rsa"
+  topology_remote_dir: "/home/labuser/clab-topologies"
+  use_sudo: true
+```
+
+### Node Configuration
+
+| Setting | Description | Default | Example |
+|---------|-------------|---------|---------|
+| `node.default_username` | Default SSH username for nodes | `"admin"` | `"netadmin"` |
+| `node.default_password` | Default SSH password for nodes | `null` | `"nodepass"` |
+| `node.ssh_port` | Default SSH port for nodes | `22` | `830` |
+| `node.connection_timeout` | SSH timeout (seconds) | `30` | `45` |
+| `node.private_key_path` | Default SSH key for nodes | `null` | `"~/.ssh/node_key"` |
+
+**Security Warning**: Storing passwords in configuration files is not recommended. Use SSH keys or environment variables instead.
+
+```yaml
+# Example node configuration
+node:
+  default_username: "admin"
+  # Use SSH key instead of password
+  private_key_path: "~/.ssh/containerlab_key"
+  ssh_port: 22
+  connection_timeout: 30
 ```
 
 ## Lab Management and Persistence
@@ -212,7 +248,12 @@ Override any configuration setting using environment variables with the `CLAB_` 
 | `CLAB_DB_URL` | Override database URL | `export CLAB_DB_URL="sqlite:///custom.db"` |
 | `CLAB_LAB_CURRENT_LAB` | Override current lab | `export CLAB_LAB_CURRENT_LAB="test-lab"` |
 | `CLAB_TOPOLOGY_DEFAULT_PREFIX` | Override topology prefix | `export CLAB_TOPOLOGY_DEFAULT_PREFIX="mylab"` |
+| `CLAB_LOG_ENABLED` | Enable/disable logging | `export CLAB_LOG_ENABLED=false` |
 | `CLAB_LOG_LEVEL` | Override log level | `export CLAB_LOG_LEVEL=DEBUG` |
+| `CLAB_QUIET` | Enable quiet mode | `export CLAB_QUIET=true` |
+| `CLAB_NODE_DEFAULT_USERNAME` | Node SSH username | `export CLAB_NODE_DEFAULT_USERNAME="admin"` |
+| `CLAB_NODE_PRIVATE_KEY_PATH` | Node SSH key path | `export CLAB_NODE_PRIVATE_KEY_PATH="~/.ssh/node_key"` |
+| `CLAB_REMOTE_TOPOLOGY_REMOTE_DIR` | Remote topology directory | `export CLAB_REMOTE_TOPOLOGY_REMOTE_DIR="/opt/topologies"` |
 
 ### Environment Variable Naming
 

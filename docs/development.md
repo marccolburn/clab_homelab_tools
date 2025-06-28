@@ -70,7 +70,10 @@ clab_tools/
 ├── config/           # Configuration management
 ├── bridges/          # Bridge management
 ├── topology/         # Topology generation
-├── logging/          # Logging setup
+├── node/             # Node management (SSH/upload)
+├── remote/           # Remote host operations
+├── log_config/       # Logging setup
+├── common/           # Common utilities
 └── errors/           # Custom exceptions
 ```
 
@@ -88,18 +91,27 @@ python -m pytest tests/test_database.py -v
 # With coverage report
 python -m pytest tests/ --cov=clab_tools --cov-report=html
 
-# Integration tests (requires containerlab)
-python -m pytest tests/integration/ -v
+# Remote integration tests (requires containerlab)
+python -m pytest tests/test_remote_*.py -v
 ```
 
 ### Test Structure
 
+All tests are located in the `tests/` directory as individual test files:
+
 ```
 tests/
-├── unit/              # Unit tests
-├── integration/       # Integration tests
-├── fixtures/          # Test data
-└── conftest.py        # Test configuration
+├── conftest.py                      # Pytest fixtures and configuration
+├── test_database.py                 # Database operations
+├── test_bridge_manager.py           # Bridge management
+├── test_topology_generator.py       # Topology generation
+├── test_csv_import.py               # CSV import functionality
+├── test_config*.py                  # Configuration tests
+├── test_quiet_mode.py               # Non-interactive mode tests
+├── test_start_stop_commands.py      # Topology lifecycle tests
+├── test_node_upload.py              # Node file upload tests
+├── test_bootstrap_teardown.py       # Lab lifecycle tests
+└── test_remote_*.py                 # Remote operation tests
 ```
 
 ## Code Guidelines
@@ -110,6 +122,7 @@ tests/
 - **Flake8** for linting
 - **MyPy** for type checking
 - **isort** for import sorting
+- **Important**: All imports must be at the top of the file (never inside functions)
 
 ```bash
 # Format code

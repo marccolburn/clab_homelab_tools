@@ -5,9 +5,29 @@ import tempfile
 from pathlib import Path
 
 import pytest
+from click.testing import CliRunner
 
 from clab_tools.config.settings import DatabaseSettings, LoggingSettings, Settings
 from clab_tools.db.manager import DatabaseManager
+
+
+@pytest.fixture
+def runner_with_no_logging():
+    """Create a CliRunner with logging disabled."""
+    runner = CliRunner()
+
+    # Create a wrapper that adds the env variable to all invocations
+    original_invoke = runner.invoke
+
+    def invoke_with_env(cli, args=None, **kwargs):
+        # Add CLAB_LOG_ENABLED=false to environment
+        env = kwargs.get("env", {})
+        env["CLAB_LOG_ENABLED"] = "false"
+        kwargs["env"] = env
+        return original_invoke(cli, args, **kwargs)
+
+    runner.invoke = invoke_with_env
+    return runner
 
 
 @pytest.fixture
@@ -26,8 +46,8 @@ def test_db_settings():
 
 @pytest.fixture
 def test_logging_settings():
-    """Create test logging settings."""
-    return LoggingSettings(level="DEBUG", format="console")
+    """Create test logging settings with logging disabled."""
+    return LoggingSettings(enabled=False, level="CRITICAL", format="console")
 
 
 @pytest.fixture

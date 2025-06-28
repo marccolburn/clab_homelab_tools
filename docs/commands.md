@@ -11,6 +11,7 @@ Available with all commands:
 -c, --config TEXT       # Configuration file path
 -l, --lab TEXT          # Lab name override
 --debug                 # Enable debug mode
+-q, --quiet             # Suppress interactive prompts for scripting
 --log-level TEXT        # Set log level (DEBUG, INFO, WARNING, ERROR, CRITICAL)
 --log-format TEXT       # Set log format (json, console)
 --remote-host TEXT      # Remote containerlab host IP/hostname
@@ -67,6 +68,81 @@ clab-tools lab delete old-lab
 ```
 
 Deletes lab and all its data permanently.
+
+**Options:**
+- `-f, --force` - Skip confirmation prompts
+
+#### `lab bootstrap`
+
+Bootstrap a complete lab environment from CSV files to running topology.
+
+```bash
+clab-tools lab bootstrap --nodes nodes.csv --connections connections.csv --output topology.yml [OPTIONS]
+```
+
+**Options:**
+- `-n, --nodes PATH` - Nodes CSV file (required)
+- `-c, --connections PATH` - Connections CSV file (required)
+- `-o, --output TEXT` - Output topology file name (required)
+- `--no-start` - Skip starting the topology
+- `--skip-vlans` - Skip VLAN configuration
+- `--dry-run` - Show what would be done without executing
+
+**Workflow Steps:**
+1. Import CSV data (clears existing data)
+2. Generate topology file with validation
+3. Upload topology to remote host (if configured)
+4. Create bridges
+5. Start containerlab topology
+6. Configure VLANs on bridge interfaces
+
+**Examples:**
+```bash
+# Basic bootstrap
+clab-tools lab bootstrap -n nodes.csv -c connections.csv -o lab.yml
+
+# Bootstrap without starting topology
+clab-tools lab bootstrap -n nodes.csv -c connections.csv -o lab.yml --no-start
+
+# Preview bootstrap steps
+clab-tools lab bootstrap -n nodes.csv -c connections.csv -o lab.yml --dry-run
+
+# Bootstrap with quiet mode for scripting
+clab-tools --quiet lab bootstrap -n nodes.csv -c connections.csv -o lab.yml
+```
+
+#### `lab teardown`
+
+Teardown a complete lab environment.
+
+```bash
+clab-tools lab teardown --topology topology.yml [OPTIONS]
+```
+
+**Options:**
+- `-t, --topology TEXT` - Topology file name (required)
+- `--keep-data` - Keep database entries (don't clear data)
+- `--dry-run` - Show what would be done without executing
+
+**Workflow Steps:**
+1. Stop containerlab topology
+2. Remove bridges
+3. Clear database entries (optional)
+
+**Examples:**
+```bash
+# Basic teardown
+clab-tools lab teardown -t lab.yml
+
+# Teardown but keep database entries
+clab-tools lab teardown -t lab.yml --keep-data
+
+# Preview teardown steps
+clab-tools lab teardown -t lab.yml --dry-run
+
+# Teardown with quiet mode
+clab-tools --quiet lab teardown -t lab.yml
+```
 
 ## Data Management
 
@@ -154,6 +230,80 @@ clab-tools topology generate -o lab.yml --validate
 
 # Generate and upload to remote
 clab-tools topology generate --upload --enable-remote -o lab.yml
+```
+
+#### `topology start <file>`
+
+Start a containerlab topology.
+
+```bash
+clab-tools topology start topology.yml [OPTIONS]
+```
+
+**Options:**
+- `-p, --path TEXT` - Custom path for topology file (overrides remote dir)
+- `--remote` - Force remote execution
+- `--local` - Force local execution (when remote is configured)
+
+**Behavior:**
+- Default: Runs locally
+- If remote host is configured, uses `remote.topology_remote_dir` unless `--path` is specified
+- Use `--remote` to force remote execution
+- Use `--local` to force local execution when remote is configured
+
+**Examples:**
+```bash
+# Start topology locally (default)
+clab-tools topology start lab.yml
+
+# Start topology on remote host
+clab-tools topology start lab.yml --remote
+
+# Start topology with custom path
+clab-tools topology start lab.yml --path /custom/path/lab.yml
+
+# Force local execution when remote is configured
+clab-tools --enable-remote topology start lab.yml --local
+
+# Start with quiet mode
+clab-tools --quiet topology start lab.yml
+```
+
+#### `topology stop <file>`
+
+Stop a containerlab topology.
+
+```bash
+clab-tools topology stop topology.yml [OPTIONS]
+```
+
+**Options:**
+- `-p, --path TEXT` - Custom path for topology file (overrides remote dir)
+- `--remote` - Force remote execution
+- `--local` - Force local execution (when remote is configured)
+
+**Behavior:**
+- Default: Runs locally
+- If remote host is configured, uses `remote.topology_remote_dir` unless `--path` is specified
+- Use `--remote` to force remote execution
+- Use `--local` to force local execution when remote is configured
+
+**Examples:**
+```bash
+# Stop topology locally (default)
+clab-tools topology stop lab.yml
+
+# Stop topology on remote host
+clab-tools topology stop lab.yml --remote
+
+# Stop topology with custom path
+clab-tools topology stop lab.yml --path /custom/path/lab.yml
+
+# Force local execution when remote is configured
+clab-tools --enable-remote topology stop lab.yml --local
+
+# Stop with quiet mode
+clab-tools --quiet topology stop lab.yml
 ```
 
 ## Bridge Management
@@ -276,6 +426,74 @@ sudo clab-tools bridge cleanup
 # Force delete without prompts
 sudo clab-tools bridge cleanup --force
 ```
+
+## Node Management
+
+### `clab-tools node`
+
+Manage individual containerlab nodes.
+
+#### `node upload`
+
+Upload files or directories to containerlab nodes using their management IP addresses.
+
+```bash
+clab-tools node upload [OPTIONS]
+```
+
+**Options:**
+- `--node TEXT` - Upload to specific node
+- `--kind TEXT` - Upload to all nodes of specific kind
+- `--nodes TEXT` - Upload to comma-separated list of nodes
+- `--all` - Upload to all nodes in current lab
+- `--source PATH` - Local file to upload (required if not using --source-dir)
+- `--source-dir PATH` - Local directory to upload recursively
+- `--dest TEXT` - Remote destination path (required)
+- `--user TEXT` - SSH username (overrides default)
+- `--password TEXT` - SSH password (overrides default)
+- `--private-key PATH` - SSH private key file (overrides default)
+
+**Target Selection (choose one):**
+- `--node` - Single node by name
+- `--kind` - All nodes of a specific kind/type
+- `--nodes` - Specific list of nodes
+- `--all` - All nodes in the current lab
+
+**Examples:**
+```bash
+# Upload file to specific node
+clab-tools node upload --node router1 --source config.txt --dest /tmp/config.txt
+
+# Upload to all SRX nodes
+clab-tools node upload --kind srx --source juniper.conf --dest /etc/juniper.conf
+
+# Upload to specific nodes
+clab-tools node upload --nodes router1,router2,router3 --source config.yml --dest /tmp/config.yml
+
+# Upload to all nodes in lab
+clab-tools node upload --all --source startup.sh --dest /tmp/startup.sh
+
+# Upload directory recursively
+clab-tools node upload --node server1 --source-dir ./configs --dest /etc/configs
+
+# Use custom credentials
+clab-tools node upload --node switch1 --source config.txt --dest /tmp/config.txt \
+  --user admin --password secret
+
+# Use SSH key authentication
+clab-tools node upload --kind linux --source script.sh --dest /opt/script.sh \
+  --private-key ~/.ssh/lab_key
+
+# Quiet mode for scripting
+clab-tools --quiet node upload --all --source init.sh --dest /tmp/init.sh
+```
+
+**Upload Summary:**
+After uploading, the command displays:
+- Total nodes targeted
+- Successful uploads
+- Failed uploads
+- Individual node results (unless in quiet mode)
 
 ## Remote Operations
 

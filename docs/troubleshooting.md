@@ -6,29 +6,35 @@ Common issues and solutions for clab-tools.
 
 ```bash
 # Check installation
-./clab-tools.sh --version
-./clab-tools.sh --help
+clab-tools --version
+clab-tools --help
 
 # Test database
-./clab-tools.sh data show
+clab-tools data show
 
 # Test configuration
-./clab-tools.sh remote show-config
+clab-tools --debug lab current
 
 # Enable debug mode
-./clab-tools.sh --debug --verbose [command]
+clab-tools --debug [command]
+
+# Disable logging for cleaner output
+export CLAB_LOG_ENABLED=false
 ```
 
 ## Installation Issues
 
 ### Command Not Found
 
-**Problem**: `./clab-tools.sh: command not found`
+**Problem**: `clab-tools: command not found`
 
 **Solutions**:
 ```bash
-# Make executable
-chmod +x clab-tools.sh
+# Run install script
+./install-cli.sh
+
+# Check if symlink exists
+ls -la /usr/local/bin/clab-tools
 
 # Check Python installation
 python3 --version
@@ -61,7 +67,7 @@ pip3 install -r requirements.txt
 **Solutions**:
 ```bash
 # Initialize database
-./clab-tools.sh db init
+clab-tools db init
 
 # Check database location (in project directory)
 ls -la clab_topology.db
@@ -81,8 +87,8 @@ clab-tools data show  # Will recreate database automatically
 head -1 nodes.csv
 
 # Clear and re-import
-./clab-tools.sh data clear
-./clab-tools.sh data import -n nodes.csv -c connections.csv
+clab-tools data clear
+clab-tools data import -n nodes.csv -c connections.csv
 ```
 
 ## Bridge and Network Issues
@@ -94,7 +100,7 @@ head -1 nodes.csv
 **Solutions**:
 ```bash
 # Run with sudo
-sudo ./clab-tools.sh bridge create br-mgmt
+sudo clab-tools bridge create br-mgmt
 
 # Check existing bridges
 ip link show type bridge
@@ -145,7 +151,7 @@ ssh-keyscan -H remote-host >> ~/.ssh/known_hosts
 **Solutions**:
 ```bash
 # Test remote connectivity
-./clab-tools.sh remote test-connection hostname
+clab-tools remote test-connection hostname
 
 # Check remote containerlab installation
 ssh user@remote-host "which containerlab"
@@ -199,7 +205,7 @@ containerlab version
 python3 -c "import yaml; yaml.safe_load(open('config.yaml'))"
 
 # Show effective configuration
-./clab-tools.sh config show
+clab-tools config show
 
 # Reset to defaults
 cp config.local.example.yaml config.local.yaml
@@ -231,7 +237,7 @@ echo 'export CLAB_PROJECT_NAME="my-lab"' >> ~/.bashrc
 **Solutions**:
 ```bash
 # Rebuild database with indexes
-./clab-tools.sh db init --rebuild
+clab-tools db init --rebuild
 
 # Check database size
 ls -lh clab_topology.db
@@ -247,14 +253,14 @@ sqlite3 clab_topology.db "VACUUM;"
 **Solutions**:
 ```bash
 # Generate in smaller batches
-./clab-tools.sh topology generate --max-nodes 50
+clab-tools topology generate --max-nodes 50
 
 # Increase timeout
 export CLAB_TIMEOUT=300
-./clab-tools.sh topology generate
+clab-tools topology generate
 
 # Use streaming mode for large datasets
-./clab-tools.sh topology generate --stream
+clab-tools topology generate --stream
 ```
 
 ## Debug Mode
@@ -263,10 +269,10 @@ export CLAB_TIMEOUT=300
 
 ```bash
 # Full debug output
-./clab-tools.sh --debug --verbose command
+clab-tools --debug --verbose command
 
 # Log to file
-./clab-tools.sh --debug command 2>&1 | tee debug.log
+clab-tools --debug command 2>&1 | tee debug.log
 
 # Set environment variable
 export CLAB_LOG_LEVEL=DEBUG
@@ -276,13 +282,13 @@ export CLAB_LOG_LEVEL=DEBUG
 
 ```bash
 # Show all data
-./clab-tools.sh data show
+clab-tools data show
 
 # Test remote connection
-./clab-tools.sh remote test-connection
+clab-tools remote test-connection
 
 # Show remote configuration
-./clab-tools.sh remote show-config
+clab-tools remote show-config
 ```
 
 ## Getting Help
@@ -293,15 +299,15 @@ When reporting issues, include:
 
 ```bash
 # System information
-./clab-tools.sh --version
+clab-tools --version
 python3 --version
 uname -a
 
 # Configuration
-./clab-tools.sh config show
+clab-tools config show
 
 # Error output with debug
-./clab-tools.sh --debug [failing-command] 2>&1
+clab-tools --debug [failing-command] 2>&1
 ```
 
 ### Common Support Resources
@@ -322,11 +328,11 @@ cp config.yaml config.yaml.backup
 
 # Clean slate
 rm clab_topology.db config.local.yaml
-./clab-tools.sh db init
+clab-tools db init
 cp config.local.example.yaml config.local.yaml
 
 # Reimport data
-./clab-tools.sh data import -n nodes.csv -c connections.csv
+clab-tools data import -n nodes.csv -c connections.csv
 ```
 ```
 
@@ -364,9 +370,9 @@ sudo python main.py bridge create
 # Or run with virtual environment
 sudo .venv/bin/python main.py bridge create
 
-# Check file permissions
-ls -la clab-tools.sh
-chmod +x clab-tools.sh
+# Check installation location
+ls -la /usr/local/bin/clab-tools
+readlink /usr/local/bin/clab-tools
 ```
 
 ### Configuration Issues
@@ -880,8 +886,87 @@ When reporting issues, include:
 - **Template errors**: Verify template syntax, use default template
 - **Network issues**: Check connectivity, verify credentials
 
+## New Features Troubleshooting
+
+### Bootstrap Command Issues
+
+**Problem**: Bootstrap command fails at specific step
+
+**Solutions**:
+```bash
+# Run with dry-run to see what would happen
+clab-tools lab bootstrap -n nodes.csv -c connections.csv -o lab.yml --dry-run
+
+# Skip problematic steps
+clab-tools lab bootstrap -n nodes.csv -c connections.csv -o lab.yml --no-start
+clab-tools lab bootstrap -n nodes.csv -c connections.csv -o lab.yml --skip-vlans
+
+# Run in quiet mode for scripting
+clab-tools --quiet lab bootstrap -n nodes.csv -c connections.csv -o lab.yml
+```
+
+### Node Upload Failures
+
+**Problem**: Cannot upload files to nodes
+
+**Solutions**:
+```bash
+# Check node connectivity
+ping <node-mgmt-ip>
+
+# Test SSH access
+ssh admin@<node-mgmt-ip>
+
+# Use specific credentials
+clab-tools node upload --node router1 --source config.txt --dest /tmp/config.txt \
+  --user admin --password secret
+
+# Use SSH key authentication
+clab-tools node upload --node router1 --source config.txt --dest /tmp/config.txt \
+  --private-key ~/.ssh/lab_key
+
+# Check node exists in database
+clab-tools data show
+```
+
+### Start/Stop Command Issues
+
+**Problem**: Topology start/stop commands fail
+
+**Solutions**:
+```bash
+# Check topology file exists
+ls -la topology.yml
+
+# Force local execution
+clab-tools topology start topology.yml --local
+
+# Use absolute path
+clab-tools topology start /full/path/to/topology.yml
+
+# Check containerlab is installed
+which containerlab
+containerlab version
+```
+
+### Quiet Mode Not Working
+
+**Problem**: Commands still prompt in quiet mode
+
+**Solutions**:
+```bash
+# Use global quiet flag (before command)
+clab-tools --quiet lab create test
+
+# Set environment variable
+export CLAB_QUIET=true
+
+# Check if command supports quiet mode
+clab-tools [command] --help | grep quiet
+```
+
 For additional help:
-- Check [GitHub Issues](repository-url/issues)
+- Check [GitHub Issues](https://github.com/marccolburn/clab_homelab_tools/issues)
 - Review [User Guide](user-guide.md)
 - Consult [Configuration Guide](configuration.md)
-- See [Developer Guide](developer-guide.md) for advanced debugging
+- See [Development Guide](development.md) for advanced debugging

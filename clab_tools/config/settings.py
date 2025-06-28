@@ -71,6 +71,7 @@ class DatabaseSettings(BaseSettings):
 class LoggingSettings(BaseSettings):
     """Logging configuration settings."""
 
+    enabled: bool = Field(default=True, description="Enable logging")
     level: str = Field(default="INFO", description="Log level")
     format: str = Field(default="json", description="Log format: json or console")
     file_path: Optional[str] = Field(default=None, description="Log file path")
@@ -201,6 +202,30 @@ class RemoteHostSettings(BaseSettings):
         return bool(self.password or self.private_key_path)
 
 
+class NodeSettings(BaseSettings):
+    """Node authentication and connection settings."""
+
+    default_username: Optional[str] = Field(
+        default="admin", description="Default SSH username for nodes"
+    )
+    default_password: Optional[str] = Field(
+        default=None, description="Default SSH password for nodes"
+    )
+    ssh_port: int = Field(default=22, description="Default SSH port for nodes")
+    connection_timeout: int = Field(
+        default=30, description="SSH connection timeout in seconds"
+    )
+    private_key_path: Optional[str] = Field(
+        default=None, description="Default SSH private key for nodes"
+    )
+
+    model_config = ConfigDict(env_prefix="CLAB_NODE_")
+
+    def has_auth_method(self) -> bool:
+        """Check if at least one authentication method is configured."""
+        return bool(self.default_password or self.private_key_path)
+
+
 class Settings(BaseSettings):
     """Main application settings."""
 
@@ -211,6 +236,7 @@ class Settings(BaseSettings):
     bridges: BridgeSettings = Field(default_factory=BridgeSettings)
     remote: RemoteHostSettings = Field(default_factory=RemoteHostSettings)
     lab: LabSettings = Field(default_factory=LabSettings)
+    node: NodeSettings = Field(default_factory=NodeSettings)
 
     # General settings
     config_file: Optional[str] = Field(

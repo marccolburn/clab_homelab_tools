@@ -140,15 +140,35 @@ clab-tools topology generate --upload --enable-remote -o lab.yml
 # Create bridges on remote host
 clab-tools --enable-remote bridge create
 
-# Deploy topology
-clab-tools --enable-remote remote execute "sudo clab deploy -t /tmp/clab-topologies/lab.yml"
+# Start topology using simplified command (uses topology_remote_dir)
+clab-tools topology start lab.yml --remote
 
 # Monitor deployment
 clab-tools --enable-remote remote execute "clab inspect"
 
-# Cleanup
-clab-tools --enable-remote remote execute "sudo clab destroy -t /tmp/clab-topologies/lab.yml"
+# Stop topology
+clab-tools topology stop lab.yml --remote
+
+# Cleanup bridges
 clab-tools --enable-remote bridge cleanup
+```
+
+### Start/Stop Commands with Remote Host
+
+The new start/stop commands simplify remote operations:
+
+```bash
+# Start topology on remote host (uses remote.topology_remote_dir setting)
+clab-tools topology start lab.yml --remote
+
+# Start with custom path on remote
+clab-tools topology start lab.yml --remote --path /home/clab-user/topologies/lab.yml
+
+# Force local execution even when remote is configured
+clab-tools --enable-remote topology start lab.yml --local
+
+# Stop topology on remote
+clab-tools topology stop lab.yml --remote
 ```
 
 ### File Management
@@ -160,6 +180,24 @@ clab-tools --enable-remote remote upload-topology my-lab.yml
 # Execute with uploaded file
 clab-tools --enable-remote remote execute "sudo clab deploy -t /tmp/clab-topologies/my-lab.yml"
 ```
+
+### Node File Upload
+
+Upload files directly to containerlab nodes through the remote host:
+
+```bash
+# Upload config to specific node (SSH through remote host to node)
+clab-tools node upload --node router1 --source config.txt --dest /tmp/config.txt
+
+# Upload to all nodes (works with local or remote topologies)
+clab-tools node upload --all --source startup.sh --dest /tmp/startup.sh
+
+# Upload with custom credentials
+clab-tools node upload --node switch1 --source config.cfg --dest /etc/config.cfg \
+  --user admin --password secret
+```
+
+**Note**: Node uploads work whether your topology is running locally or on a remote host. The tool automatically handles SSH connectivity through the appropriate path.
 
 ## Troubleshooting
 
@@ -231,6 +269,21 @@ clab-tools --enable-remote remote execute "sudo docker version"
 - Monitor SSH access logs
 - Use firewall rules to restrict access
 
+## Bootstrap and Teardown on Remote Hosts
+
+The bootstrap and teardown commands work seamlessly with remote hosts:
+
+```bash
+# Bootstrap complete lab on remote host
+clab-tools --enable-remote lab bootstrap -n nodes.csv -c connections.csv -o lab.yml
+
+# Teardown remote lab
+clab-tools --enable-remote lab teardown -t lab.yml
+
+# Non-interactive remote bootstrap for automation
+clab-tools --quiet --enable-remote lab bootstrap -n nodes.csv -c connections.csv -o lab.yml
+```
+
 ## Example Configuration
 
 ### Complete config.yaml
@@ -258,6 +311,14 @@ remote:
   private_key_path: "~/.ssh/clab_rsa"
   use_sudo: true
   # Optional: sudo_password if different from login password
+  topology_remote_dir: "/tmp/clab-topologies"  # Directory for topology files on remote host
+
+# Node settings for SSH access to containerlab nodes
+node:
+  default_username: "admin"
+  private_key_path: "~/.ssh/node_key"
+  ssh_port: 22
+  connection_timeout: 30
 
 # Logging settings
 logging:

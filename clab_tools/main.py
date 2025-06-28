@@ -7,6 +7,7 @@ persistent storage. This is the main entry point that coordinates all the
 different command modules.
 """
 
+import os
 import sys
 
 import click
@@ -20,10 +21,11 @@ from clab_tools.commands.bridge_commands import (
     list_bridges,
 )
 from clab_tools.commands.data_commands import clear_data, show_data
-from clab_tools.commands.generate_topology import generate_topology
 from clab_tools.commands.import_csv import import_csv
 from clab_tools.commands.lab_commands import lab_commands
+from clab_tools.commands.node_commands import node_commands
 from clab_tools.commands.remote_commands import remote
+from clab_tools.commands.topology_commands import generate_topology, start, stop
 from clab_tools.config.settings import initialize_settings
 from clab_tools.db.manager import DatabaseManager
 from clab_tools.errors.handlers import error_handler
@@ -36,6 +38,9 @@ from clab_tools.log_config.logger import get_logger, setup_logging
 @click.option("--config", "-c", default=None, help="Path to configuration file")
 @click.option("--lab", "-l", default=None, help="Lab name to use (overrides config)")
 @click.option("--debug", is_flag=True, help="Enable debug mode")
+@click.option(
+    "--quiet", "-q", is_flag=True, help="Suppress interactive prompts for scripting"
+)
 @click.option(
     "--log-level",
     default=None,
@@ -58,6 +63,7 @@ def cli(
     config,
     lab,
     debug,
+    quiet,
     log_level,
     log_format,
     remote_host,
@@ -100,6 +106,10 @@ def cli(
     if lab:
         settings.lab.current_lab = lab
 
+    # Handle quiet mode from CLI or environment variable
+    if not quiet:
+        quiet = os.getenv("CLAB_QUIET", "").lower() in ("true", "1", "yes")
+
     # Override remote settings with command line arguments
     if enable_remote or remote_host:
         settings.remote.enabled = True
@@ -114,11 +124,16 @@ def cli(
     if remote_key:
         settings.remote.private_key_path = remote_key
 
-    # Setup logging
-    setup_logging(settings.logging)
-    logger = get_logger(__name__)
-
-    logger.info("Starting clab-tools CLI", version=__version__, debug=settings.debug)
+    # Setup logging only if enabled
+    if settings.logging.enabled:
+        setup_logging(settings.logging)
+        logger = get_logger(__name__)
+        logger.info(
+            "Starting clab-tools CLI", version=__version__, debug=settings.debug
+        )
+    else:
+        # Get logger without setup - will use structlog defaults (no output)
+        logger = get_logger(__name__)
 
     # Initialize database manager (multi-lab first approach)
     try:
@@ -133,7 +148,8 @@ def cli(
 
         # Ensure current lab exists
         db_manager.get_or_create_lab(current_lab)
-        logger.info("Using lab context", lab=current_lab)
+        if settings.logging.enabled:
+            logger.info("Using lab context", lab=current_lab)
 
     except Exception as e:
         logger.error("Failed to initialize database", error=str(e))
@@ -144,6 +160,7 @@ def cli(
     ctx.obj["db"] = db_manager
     ctx.obj["settings"] = settings
     ctx.obj["debug"] = settings.debug
+    ctx.obj["quiet"] = quiet
     # Keep these for bridge commands until they're updated
     ctx.obj["db_manager"] = db_manager
     ctx.obj["lab_name"] = current_lab
@@ -176,6 +193,8 @@ data.add_command(show_data, name="show")
 data.add_command(clear_data, name="clear")
 
 topology.add_command(generate_topology, name="generate")
+topology.add_command(start, name="start")
+topology.add_command(stop, name="stop")
 
 bridge.add_command(create_bridges, name="create")
 bridge.add_command(create_bridge, name="create-bridge")
@@ -185,6 +204,7 @@ bridge.add_command(list_bridges, name="list")
 
 # Register command groups and existing groups
 cli.add_command(lab_commands, name="lab")
+cli.add_command(node_commands, name="node")
 cli.add_command(remote)
 cli.add_command(data)
 cli.add_command(topology)
