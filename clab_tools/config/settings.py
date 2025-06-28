@@ -13,10 +13,21 @@ from pydantic import ConfigDict, Field, field_validator
 from pydantic_settings import BaseSettings
 
 
+def get_default_database_path() -> str:
+    """Get default database path relative to the package installation directory."""
+    # Get the directory where this settings.py file is located
+    package_dir = Path(__file__).parent.parent.parent
+    # Create the database path in the package root directory
+    db_path = package_dir / "clab_topology.db"
+    return f"sqlite:///{db_path.absolute()}"
+
+
 class DatabaseSettings(BaseSettings):
     """Database configuration settings."""
 
-    url: str = Field(default="sqlite:///clab_topology.db", description="Database URL")
+    url: str = Field(
+        default_factory=get_default_database_path, description="Database URL"
+    )
     echo: bool = Field(default=False, description="Enable SQL echo logging")
     pool_pre_ping: bool = Field(
         default=True, description="Enable connection pool pre-ping"

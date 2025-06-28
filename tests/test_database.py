@@ -1,7 +1,13 @@
 """Tests for database manager."""
 
+import os
+import tempfile
+from pathlib import Path
+
 import pytest
 
+from clab_tools.config.settings import DatabaseSettings, get_default_database_path
+from clab_tools.db.manager import DatabaseManager
 from clab_tools.errors.exceptions import DatabaseError
 
 
@@ -212,3 +218,159 @@ class TestDatabaseManager:
         # Test non-existent kind
         nodes = populated_db_manager.get_nodes_by_kind("nonexistent")
         assert len(nodes) == 0
+
+
+class TestDatabaseLocation:
+    """Test cases for database location behavior."""
+
+    def test_default_database_path_function(self):
+        """Test that get_default_database_path returns correct path."""
+        db_path = get_default_database_path()
+
+        # Should be a sqlite URL
+        assert db_path.startswith("sqlite:///")
+
+        # Should be an absolute path
+        path_part = db_path.replace("sqlite:///", "")
+        assert Path(path_part).is_absolute()
+
+        # Should end with clab_topology.db
+        assert path_part.endswith("clab_topology.db")
+
+        # Should be in the package directory (3 levels up from settings.py)
+        expected_dir = Path(__file__).parent.parent
+        expected_path = expected_dir / "clab_topology.db"
+        assert path_part == str(expected_path.absolute())
+
+    def test_database_settings_default_factory(self):
+        """Test that DatabaseSettings uses the default_factory correctly."""
+        settings = DatabaseSettings()
+
+        # Should use the dynamically generated path
+        assert settings.url.startswith("sqlite:///")
+        assert "clab_topology.db" in settings.url
+
+        # Should be an absolute path
+        path_part = settings.url.replace("sqlite:///", "")
+        assert Path(path_part).is_absolute()
+
+    def test_database_location_consistency_across_directories(self):
+        """Test database path consistency across directories."""
+        original_cwd = os.getcwd()
+
+        try:
+            # Get path from original directory
+            original_path = get_default_database_path()
+
+            # Change to temporary directory
+            with tempfile.TemporaryDirectory() as temp_dir:
+                os.chdir(temp_dir)
+
+                # Get path from different directory
+                temp_path = get_default_database_path()
+
+                # Should be the same
+                assert original_path == temp_path
+
+                # Both should be absolute paths
+                assert Path(original_path.replace("sqlite:///", "")).is_absolute()
+                assert Path(temp_path.replace("sqlite:///", "")).is_absolute()
+
+        finally:
+            # Always restore original directory
+            os.chdir(original_cwd)
+
+    def test_database_manager_with_default_path(self):
+        """Test DatabaseManager works with default path configuration."""
+        # Create database manager (using memory for testing to avoid file conflicts)
+        with tempfile.NamedTemporaryFile(suffix=".db", delete=False) as temp_db:
+            temp_db_url = f"sqlite:///{temp_db.name}"
+
+        try:
+            # Override with temp database for testing
+            test_settings = DatabaseSettings(url=temp_db_url)
+            db_manager = DatabaseManager(settings=test_settings)
+
+            # Should initialize successfully
+            assert db_manager.health_check()
+
+            # Should be able to perform basic operations
+            result = db_manager.insert_node("test-node", "test-kind", "192.168.1.1")
+            assert result is True
+
+            nodes = db_manager.get_all_nodes()
+            assert len(nodes) == 1
+            assert nodes[0] == ("test-node", "test-kind", "192.168.1.1")
+
+        finally:
+            # Clean up temp database
+            if Path(temp_db.name).exists():
+                Path(temp_db.name).unlink()
+
+    def test_database_url_override_precedence(self):
+        """Test that explicit URL overrides the default path."""
+        custom_url = "sqlite:///custom_test.db"
+
+        # Create settings with custom URL
+        settings = DatabaseSettings(url=custom_url)
+
+        # Should use the custom URL, not the default
+        assert settings.url == custom_url
+        assert settings.url != get_default_database_path()
+
+    def test_database_path_in_package_directory(self):
+        """Test that default database path is in the package root directory."""
+        db_path = get_default_database_path()
+        path_part = db_path.replace("sqlite:///", "")
+
+        # Should be in the package root (where setup.py, pyproject.toml would be)
+        package_root = Path(__file__).parent.parent
+        expected_path = package_root / "clab_topology.db"
+
+        assert Path(path_part) == expected_path.absolute()
+
+        # Verify this is indeed the package root by checking for key files
+        assert (package_root / "pyproject.toml").exists()
+        assert (package_root / "clab_tools").exists()
+
+    def test_database_settings_immutable_after_creation(self):
+        """Test that database path is determined at creation time."""
+        original_cwd = os.getcwd()
+
+        try:
+            # Create settings in original directory
+            settings1 = DatabaseSettings()
+            path1 = settings1.url
+
+            # Change directory and create new settings
+            with tempfile.TemporaryDirectory() as temp_dir:
+                os.chdir(temp_dir)
+                settings2 = DatabaseSettings()
+                path2 = settings2.url
+
+                # Both should point to the same absolute location
+                assert path1 == path2
+
+                # And it should be the package directory, not the temp directory
+                assert temp_dir not in path1
+                assert temp_dir not in path2
+
+        finally:
+            os.chdir(original_cwd)
+
+    def test_database_directory_structure(self):
+        """Test that the database path resolves to expected directory structure."""
+        db_path = get_default_database_path()
+        path_part = db_path.replace("sqlite:///", "")
+        db_file_path = Path(path_part)
+
+        # Parent directory should be the package root
+        package_dir = db_file_path.parent
+
+        # Should contain expected package structure
+        assert (package_dir / "clab_tools").is_dir()
+        assert (package_dir / "tests").is_dir()
+        assert (package_dir / "pyproject.toml").is_file()
+
+        # Database file should be named correctly
+        assert db_file_path.name == "clab_topology.db"

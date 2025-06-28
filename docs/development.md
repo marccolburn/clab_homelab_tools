@@ -237,9 +237,9 @@ Recommended extensions:
 # Import errors
 pip install -e .
 
-# Database issues
+# Database issues (removes database from project directory)
 rm clab_topology.db
-./clab-tools.sh db init
+clab-tools data show  # Will recreate database automatically
 
 # Permission errors (bridges)
 sudo ./clab-tools.sh bridge create br-test

@@ -24,9 +24,9 @@ clab-tools --help
 ```
 
 The install script creates:
-- Python virtual environment in `~/.local/bin/clab-tools-env/`
-- CLI wrapper script at `~/.local/bin/clab-tools`
-- Database file at `~/.local/bin/clab_topology.db`
+- Python virtual environment in the project directory (`.venv/`)
+- CLI symlink at `/usr/local/bin/clab-tools` pointing to the project
+- Database file in the project directory (`clab_topology.db`)
 
 ## First Lab
 

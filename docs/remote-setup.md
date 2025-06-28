@@ -238,7 +238,7 @@ clab-tools --enable-remote remote execute "sudo docker version"
 ```yaml
 # Database settings
 database:
-  url: "sqlite:///~/.local/bin/clab_topology.db"
+  # url: "sqlite:///custom_path.db"  # Uncomment to override default project directory location
 
 # Lab settings
 lab:

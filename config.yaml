@@ -3,7 +3,7 @@
 
 # Database settings
 database:
-  url: "sqlite:///clab_topology.db"  # SQLite database file
+  # url: "sqlite:///custom_path.db"  # Uncomment to override default package directory location
   echo: false                        # Enable SQL echo for debugging
   pool_pre_ping: true               # Enable connection pool health checks
 

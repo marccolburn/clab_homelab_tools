@@ -12,6 +12,9 @@ import click
 from clab_tools.config.settings import get_settings
 from clab_tools.errors.handlers import error_handler
 
+from ..common.utils import handle_error, handle_success, with_lab_context
+from ..db.context import get_lab_db
+
 
 @click.group(name="lab")
 def lab_commands():
@@ -23,14 +26,15 @@ def lab_commands():
 @click.option("--description", "-d", default=None, help="Description for the new lab")
 @click.argument("lab_name")
 @click.pass_context
+@with_lab_context
 @error_handler()
 def create(ctx, lab_name: str, description: Optional[str]):
     """Create a new lab."""
-    db_manager = ctx.obj["raw_db_manager"]
+    db = get_lab_db(ctx.obj)
 
-    db_manager.get_or_create_lab(lab_name, description)
+    db.get_or_create_lab(lab_name, description)
 
-    click.echo(f"✓ Lab '{lab_name}' created successfully")
+    handle_success(f"Lab '{lab_name}' created successfully")
     if description:
         click.echo(f"  Description: {description}")
 
@@ -39,18 +43,19 @@ def create(ctx, lab_name: str, description: Optional[str]):
         settings = get_settings()
         settings.lab.current_lab = lab_name
         ctx.obj["current_lab"] = lab_name
-        click.echo(f"✓ Switched to lab '{lab_name}'")
+        handle_success(f"Switched to lab '{lab_name}'")
 
 
 @lab_commands.command()
 @click.pass_context
+@with_lab_context
 @error_handler()
 def list(ctx):
     """List all labs."""
-    db_manager = ctx.obj["raw_db_manager"]
+    db = get_lab_db(ctx.obj)
     settings = get_settings()
 
-    labs = db_manager.list_labs()
+    labs = db.list_labs()
 
     if not labs:
         click.echo("No labs found.")
@@ -61,7 +66,7 @@ def list(ctx):
 
     for lab in labs:
         # Get lab statistics
-        stats = db_manager.get_lab_stats(lab.name)
+        stats = db.get_lab_stats(lab.name)
 
         # Mark current lab
         marker = "→ " if lab.name == settings.lab.current_lab else "  "
@@ -86,23 +91,24 @@ def list(ctx):
 @lab_commands.command()
 @click.argument("lab_name")
 @click.pass_context
+@with_lab_context
 @error_handler()
 def switch(ctx, lab_name: str):
     """Switch to a different lab."""
-    db_manager = ctx.obj["raw_db_manager"]
+    db = get_lab_db(ctx.obj)
     settings = get_settings()
 
     # Verify lab exists (this will create it if auto_create_lab is True)
-    db_manager.get_or_create_lab(lab_name)
+    db.get_or_create_lab(lab_name)
 
     # Update current lab setting
     settings.lab.current_lab = lab_name
     ctx.obj["current_lab"] = lab_name
 
-    click.echo(f"✓ Switched to lab '{lab_name}'")
+    handle_success(f"Switched to lab '{lab_name}'")
 
     # Show lab stats
-    stats = db_manager.get_lab_stats(lab_name)
+    stats = db.get_lab_stats(lab_name)
     click.echo(
         f"  Nodes: {stats.get('nodes', 0)}, "
         f"Connections: {stats.get('connections', 0)}, "
@@ -114,18 +120,19 @@ def switch(ctx, lab_name: str):
 @click.argument("lab_name")
 @click.option("--force", "-f", is_flag=True, help="Force deletion without confirmation")
 @click.pass_context
+@with_lab_context
 @error_handler()
 def delete(ctx, lab_name: str, force: bool):
     """Delete a lab and all its data."""
-    db_manager = ctx.obj["raw_db_manager"]
+    db = get_lab_db(ctx.obj)
     settings = get_settings()
 
     # Check if lab exists
-    labs = db_manager.list_labs()
+    labs = db.list_labs()
     lab_names = [lab.name for lab in labs]
 
     if lab_name not in lab_names:
-        click.echo(f"✗ Lab '{lab_name}' not found", err=True)
+        handle_error(f"Lab '{lab_name}' not found")
         return
 
     # Prevent deletion of current lab without confirmation
@@ -136,7 +143,7 @@ def delete(ctx, lab_name: str, force: bool):
             return
 
     # Get lab stats before deletion
-    stats = db_manager.get_lab_stats(lab_name)
+    stats = db.get_lab_stats(lab_name)
 
     if not force:
         click.echo(f"This will permanently delete lab '{lab_name}' and all its data:")
@@ -149,33 +156,34 @@ def delete(ctx, lab_name: str, force: bool):
             return
 
     # Delete the lab
-    if db_manager.delete_lab(lab_name):
-        click.echo(f"✓ Lab '{lab_name}' deleted successfully")
+    if db.delete_lab(lab_name):
+        handle_success(f"Lab '{lab_name}' deleted successfully")
 
         # Switch to default lab if we deleted the current lab
         if lab_name == settings.lab.current_lab:
             settings.lab.current_lab = "default"
             ctx.obj["current_lab"] = "default"
-            click.echo("✓ Switched to 'default' lab")
+            handle_success("Switched to 'default' lab")
     else:
-        click.echo(f"✗ Failed to delete lab '{lab_name}'", err=True)
+        handle_error(f"Failed to delete lab '{lab_name}'")
 
 
 @lab_commands.command()
 @click.pass_context
+@with_lab_context
 @error_handler()
 def current(ctx):
     """Show current lab information."""
-    db_manager = ctx.obj["raw_db_manager"]
-    current_lab = ctx.obj["current_lab"]
+    db = get_lab_db(ctx.obj)
+    current_lab = db.get_current_lab()
 
     click.echo(f"Current lab: {current_lab}")
 
     # Get lab details
-    stats = db_manager.get_lab_stats(current_lab)
+    stats = db.get_lab_stats(current_lab)
 
     if "error" in stats:
-        click.echo(f"✗ {stats['error']}")
+        handle_error(stats["error"])
         return
 
     click.echo(f"  Nodes: {stats.get('nodes', 0)}")
@@ -183,7 +191,7 @@ def current(ctx):
     click.echo(f"  Topology configurations: {stats.get('topologies', 0)}")
 
     # Get lab object for additional details
-    labs = db_manager.list_labs()
+    labs = db.list_labs()
     current_lab_obj = next((lab for lab in labs if lab.name == current_lab), None)
 
     if current_lab_obj:

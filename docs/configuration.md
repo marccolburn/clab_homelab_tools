@@ -59,6 +59,19 @@ bridges:
 | `project.description` | Project description | `""` | `"Network simulation"` |
 | `project.version` | Project version | `"1.0.0"` | `"2.1.0"` |
 
+### Database Settings
+
+| Setting | Description | Default | Example |
+|---------|-------------|---------|---------|
+| `database.url` | Database URL | Project directory | `"sqlite:///custom_path.db"` |
+| `database.echo` | Enable SQL logging | `false` | `true` |
+| `database.pool_pre_ping` | Connection health checks | `true` | `false` |
+
+**Database Location:**
+- **Default**: Database file (`clab_topology.db`) is created in the project directory
+- **Consistent**: Same location regardless of where you run `clab-tools` from
+- **Override**: Set `database.url` in config or use `--db-url` CLI option
+
 ### Node Defaults
 
 | Setting | Description | Default | Example |
