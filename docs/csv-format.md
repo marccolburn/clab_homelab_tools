@@ -20,7 +20,7 @@ node_name,kind,mgmt_ip
   - Alphanumeric and hyphens recommended
 
 - **`kind`** (string, required): Containerlab node type
-  - Common values: `juniper_vjunosrouter`, `arista_ceos`, `linux`
+  - Common values: `juniper_vjunosrouter`, `linux`
   - Special value: `bridge` for Linux bridge creation
   - See [supported kinds](../supported_kinds.yaml) for complete list
 
@@ -35,8 +35,8 @@ node_name,kind,mgmt_ip
 node_name,kind,mgmt_ip
 router1,juniper_vjunosrouter,10.100.100.11
 router2,juniper_vjunosrouter,10.100.100.12
-switch1,arista_ceos,10.100.100.21
-switch2,arista_ceos,10.100.100.22
+switch1,juniper_vjunosrouter,10.100.100.21
+switch2,juniper_vjunosrouter,10.100.100.22
 server1,linux,10.100.100.31
 br-access,bridge,
 br-core,bridge,
@@ -149,8 +149,8 @@ node_name,kind,mgmt_ip
 pe1,juniper_vjunosrouter,10.100.100.11
 pe2,juniper_vjunosrouter,10.100.100.12
 p1,juniper_vjunosrouter,10.100.100.13
-ce1,arista_ceos,10.100.100.21
-ce2,arista_ceos,10.100.100.22
+ce1,juniper_vjunosrouter,10.100.100.21
+ce2,juniper_vjunosrouter,10.100.100.22
 server1,linux,10.100.100.31
 br-mgmt,bridge,
 br-ce1,bridge,

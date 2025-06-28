@@ -82,7 +82,7 @@ Create two CSV files defining your network:
 node_name,kind,mgmt_ip
 r1,juniper_vjunosrouter,10.100.100.11
 r2,juniper_vjunosrouter,10.100.100.12
-sw1,arista_ceos,10.100.100.20
+sw1,juniper_vjunosrouter,10.100.100.20
 br-mgmt,bridge,
 ```
 

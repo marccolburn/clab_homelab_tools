@@ -118,8 +118,6 @@ def cli(
     setup_logging(settings.logging)
     logger = get_logger(__name__)
 
-    from clab_tools import __version__
-
     logger.info("Starting clab-tools CLI", version=__version__, debug=settings.debug)
 
     # Initialize database manager (multi-lab first approach)
