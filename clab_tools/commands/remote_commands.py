@@ -24,7 +24,8 @@ def remote():
 @click.option("--password", "-p", help="SSH password (prompt if not provided)")
 @click.option("--private-key", "-k", help="SSH private key file path")
 @click.option("--port", default=22, help="SSH port")
-def test_connection(host, username, password, private_key, port):
+@click.pass_context
+def test_connection(ctx, host, username, password, private_key, port):
     """Test connection to remote containerlab host."""
     settings = get_settings()
 
@@ -40,9 +41,18 @@ def test_connection(host, username, password, private_key, port):
         and not settings.remote.private_key_path
         and not settings.remote.password
     ):
-        # Only prompt for password if no auth method is available
-        password = click.prompt("Password", hide_input=True)
-        settings.remote.password = password
+        # Only prompt for password if no auth method is available and not in quiet mode
+        quiet = ctx.obj.get("quiet", False) if ctx.obj else False
+        if not quiet:
+            password = click.prompt("Password", hide_input=True)
+            settings.remote.password = password
+        else:
+            click.echo(
+                "❌ No authentication method available. Use --password, "
+                "--private-key, or configure in settings.",
+                err=True,
+            )
+            raise click.Abort()
     if private_key:
         settings.remote.private_key_path = private_key
     if port != 22:
@@ -78,7 +88,8 @@ def test_connection(host, username, password, private_key, port):
 @click.option("--host", "-h", help="Remote host IP or hostname")
 @click.option("--username", "-u", help="SSH username")
 @click.option("--password", "-p", help="SSH password")
-def upload_topology(local_file, remote_path, host, username, password):
+@click.pass_context
+def upload_topology(ctx, local_file, remote_path, host, username, password):
     """Upload topology file to remote containerlab host."""
     settings = get_settings()
 
@@ -91,8 +102,17 @@ def upload_topology(local_file, remote_path, host, username, password):
         settings.remote.password = password
     elif not settings.remote.private_key_path and not settings.remote.password:
         # Only prompt for password if no auth method is available
-        password = click.prompt("Password", hide_input=True)
-        settings.remote.password = password
+        quiet = ctx.obj.get("quiet", False) if ctx.obj else False
+        if not quiet:
+            password = click.prompt("Password", hide_input=True)
+            settings.remote.password = password
+        else:
+            click.echo(
+                "❌ No authentication method available. Use --password, "
+                "--private-key, or configure in settings.",
+                err=True,
+            )
+            raise click.Abort()
 
     settings.remote.enabled = True
 
@@ -115,7 +135,8 @@ def upload_topology(local_file, remote_path, host, username, password):
 @click.option("--host", "-h", help="Remote host IP or hostname")
 @click.option("--username", "-u", help="SSH username")
 @click.option("--password", "-p", help="SSH password")
-def execute(command, host, username, password):
+@click.pass_context
+def execute(ctx, command, host, username, password):
     """Execute a command on the remote containerlab host."""
     settings = get_settings()
 
@@ -128,8 +149,17 @@ def execute(command, host, username, password):
         settings.remote.password = password
     elif not settings.remote.private_key_path and not settings.remote.password:
         # Only prompt for password if no auth method is available
-        password = click.prompt("Password", hide_input=True)
-        settings.remote.password = password
+        quiet = ctx.obj.get("quiet", False) if ctx.obj else False
+        if not quiet:
+            password = click.prompt("Password", hide_input=True)
+            settings.remote.password = password
+        else:
+            click.echo(
+                "❌ No authentication method available. Use --password, "
+                "--private-key, or configure in settings.",
+                err=True,
+            )
+            raise click.Abort()
 
     settings.remote.enabled = True
 

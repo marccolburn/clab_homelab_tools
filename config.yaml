@@ -34,4 +34,10 @@ lab:
   use_global_database: false
   global_database_path: null
   auto_create_lab: true
+node:
+  default_username: admin
+  default_password: null
+  ssh_port: 22
+  connection_timeout: 30
+  private_key_path: null
 debug: false

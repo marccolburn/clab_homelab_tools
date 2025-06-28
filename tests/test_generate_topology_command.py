@@ -8,7 +8,7 @@ from unittest.mock import Mock, patch
 
 import pytest
 
-from clab_tools.commands.generate_topology import generate_topology_command
+from clab_tools.commands.topology_commands import generate_topology_command
 
 
 class TestGenerateTopologyCommand:

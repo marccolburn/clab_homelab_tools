@@ -60,8 +60,9 @@ def clear_data(ctx, force):
     """
     db = get_lab_db(ctx.obj)
     current_lab = db.get_current_lab()
+    quiet = ctx.obj.get("quiet", False)
 
-    if not force:
+    if not force and not quiet:
         if not click.confirm(
             f"This will clear ALL data from lab '{current_lab}'. Continue?"
         ):

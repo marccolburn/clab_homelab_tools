@@ -55,6 +55,14 @@ remote:
   use_sudo: true                       # Use sudo for bridge management commands
   # sudo_password: "sudo_pass"         # Sudo password (if different from SSH password)
 
+# Node settings - for uploading files to individual nodes
+node:
+  default_username: "admin"            # Default SSH username for nodes
+  # default_password: "password"       # Default SSH password (WARNING: plaintext, use keys instead)
+  private_key_path: "~/.ssh/id_rsa"   # Default SSH private key for nodes
+  ssh_port: 22                         # Default SSH port for nodes
+  connection_timeout: 30               # SSH connection timeout in seconds
+
 # Example: Override specific settings for different use cases
 #
 # For PostgreSQL database:
