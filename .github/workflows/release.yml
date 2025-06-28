@@ -41,10 +41,10 @@ jobs:
         python -m clab_tools.cli data show
         python -m clab_tools.cli topology generate -o release_test.yml --validate
 
-        # Test the main.py entry point as well
-        python clab_tools/main.py data import -n example_nodes.csv -c example_connections.csv --lab test-release
-        python clab_tools/main.py data show --lab test-release
-        python clab_tools/main.py topology generate -o release_test2.yml --lab test-release --validate
+        # Test the main.py entry point with different lab
+        python clab_tools/main.py --lab test-release data import -n example_nodes.csv -c example_connections.csv
+        python clab_tools/main.py --lab test-release data show
+        python clab_tools/main.py --lab test-release topology generate -o release_test2.yml --validate
 
     - name: Extract version from tag
       id: version
