@@ -193,22 +193,91 @@ remote:
 
 | Setting | Description | Default | Example |
 |---------|-------------|---------|---------|
-| `node.default_username` | Default SSH username for nodes | `"admin"` | `"netadmin"` |
+| `node.default_user` | Default SSH username for nodes | `"admin"` | `"netadmin"` |
 | `node.default_password` | Default SSH password for nodes | `null` | `"nodepass"` |
-| `node.ssh_port` | Default SSH port for nodes | `22` | `830` |
-| `node.connection_timeout` | SSH timeout (seconds) | `30` | `45` |
+| `node.default_ssh_port` | Default SSH port for nodes | `22` | `830` |
+| `node.connection_timeout` | SSH connection timeout (seconds) | `30` | `45` |
+| `node.command_timeout` | Command execution timeout (seconds) | `30` | `60` |
+| `node.config_timeout` | Configuration load timeout (seconds) | `60` | `120` |
 | `node.private_key_path` | Default SSH key for nodes | `null` | `"~/.ssh/node_key"` |
+| `node.max_parallel_workers` | Max workers for parallel operations | `5` | `10` |
+| `node.default_load_method` | Default config load method | `"merge"` | `"override"` |
 
 **Security Warning**: Storing passwords in configuration files is not recommended. Use SSH keys or environment variables instead.
 
 ```yaml
 # Example node configuration
 node:
-  default_username: "admin"
+  default_user: "admin"
   # Use SSH key instead of password
   private_key_path: "~/.ssh/containerlab_key"
-  ssh_port: 22
+  default_ssh_port: 22
   connection_timeout: 30
+  command_timeout: 30
+  config_timeout: 60
+  max_parallel_workers: 5
+  default_load_method: "merge"
+```
+
+### Vendor Configuration
+
+Configure vendor-specific settings and detection rules:
+
+| Setting | Description | Default | Example |
+|---------|-------------|---------|---------|
+| `node.vendors.<vendor>.patterns` | Kind patterns for vendor detection | Various | `["juniper_*", "vmx"]` |
+| `node.vendors.<vendor>.default_user` | Vendor-specific default user | `null` | `"root"` |
+| `node.vendors.<vendor>.default_password` | Vendor-specific default password | `null` | `"Juniper"` |
+| `node.vendors.<vendor>.default_ssh_port` | Vendor-specific SSH port | `null` | `830` |
+
+```yaml
+# Example vendor configuration
+node:
+  vendors:
+    juniper:
+      patterns:
+        - "juniper_vjunosrouter"
+        - "juniper_vjunosswitch"
+        - "juniper_vmx"
+        - "juniper_vsrx"
+        - "vjunos*"
+        - "vmx"
+        - "vsrx"
+      default_user: "root"
+      default_password: "Juniper"
+
+    nokia:
+      patterns:
+        - "nokia_srlinux"
+        - "srl"
+        - "sr_linux"
+      default_user: "admin"
+      default_password: "NokiaSrl1!"
+
+    arista:
+      patterns:
+        - "arista_ceos"
+        - "ceos"
+      default_user: "admin"
+      default_password: "admin"
+```
+
+### Driver-Specific Settings
+
+Some drivers may have specific configuration options:
+
+```yaml
+# Example with driver-specific settings
+node:
+  drivers:
+    juniper:
+      auto_probe_timeout: 30
+      gather_facts: false
+      normalize: true
+
+    nokia:
+      insecure_connection: true
+      timeout: 45
 ```
 
 ## Lab Management and Persistence

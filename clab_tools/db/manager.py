@@ -61,6 +61,19 @@ class DatabaseManager(LoggerMixin):
         # Initialize database
         self.init_database()
 
+    def close(self) -> None:
+        """Close database engine and clean up connections."""
+        try:
+            if hasattr(self, "engine") and self.engine:
+                self.engine.dispose()
+                self.logger.debug("Database engine disposed")
+        except Exception as e:
+            self.logger.warning(f"Error disposing database engine: {e}")
+
+    def __del__(self):
+        """Destructor to ensure database cleanup."""
+        self.close()
+
     def set_lab(self, lab_name: str) -> None:
         """Set the current lab for operations.
 

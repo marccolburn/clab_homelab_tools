@@ -219,11 +219,61 @@ class NodeSettings(BaseSettings):
         default=None, description="Default SSH private key for nodes"
     )
 
+    # Command execution settings
+    command_timeout: int = Field(
+        default=30, description="Default command execution timeout in seconds"
+    )
+    max_parallel_commands: int = Field(
+        default=10, description="Maximum parallel command executions"
+    )
+
+    # Configuration settings
+    config_timeout: int = Field(
+        default=60, description="Configuration operation timeout in seconds"
+    )
+    max_parallel_configs: int = Field(
+        default=5, description="Maximum parallel configuration operations"
+    )
+    default_commit_comment: Optional[str] = Field(
+        default="clab-tools configuration", description="Default commit comment"
+    )
+    auto_rollback_on_error: bool = Field(
+        default=True, description="Auto-rollback configuration on error"
+    )
+
     model_config = ConfigDict(env_prefix="CLAB_NODE_")
 
     def has_auth_method(self) -> bool:
         """Check if at least one authentication method is configured."""
         return bool(self.default_password or self.private_key_path)
+
+
+class VendorSettings(BaseSettings):
+    """Vendor-specific configuration settings."""
+
+    default_vendor_mappings: Dict[str, str] = Field(
+        default={
+            "juniper_vjunosrouter": "juniper",
+            "juniper_vjunosswitch": "juniper",
+            "juniper_vjunosevolved": "juniper",
+            "juniper_vmx": "juniper",
+            "juniper_vsrx": "juniper",
+            "juniper_vqfx": "juniper",
+            "nokia_srlinux": "nokia",
+            "arista_ceos": "arista",
+            "cisco_iosxr": "cisco",
+        },
+        description="Default vendor mappings for node kinds",
+    )
+
+    juniper_gather_facts: bool = Field(
+        default=False, description="Gather facts on Juniper device connection"
+    )
+    juniper_auto_probe: bool = Field(
+        default=True, description="Auto-probe Juniper device capabilities"
+    )
+
+    model_config = ConfigDict(env_prefix="CLAB_VENDOR_")
 
 
 class Settings(BaseSettings):
@@ -237,6 +287,7 @@ class Settings(BaseSettings):
     remote: RemoteHostSettings = Field(default_factory=RemoteHostSettings)
     lab: LabSettings = Field(default_factory=LabSettings)
     node: NodeSettings = Field(default_factory=NodeSettings)
+    vendor: VendorSettings = Field(default_factory=VendorSettings)
 
     # General settings
     config_file: Optional[str] = Field(
@@ -287,6 +338,8 @@ class Settings(BaseSettings):
             "bridges": self.bridges.model_dump(),
             "remote": self.remote.model_dump(),
             "lab": self.lab.model_dump(),
+            "node": self.node.model_dump(),
+            "vendor": self.vendor.model_dump(),
             "debug": self.debug,
             "config_file": self.config_file,
         }
