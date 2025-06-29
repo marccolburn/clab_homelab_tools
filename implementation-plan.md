@@ -1523,3 +1523,74 @@ protocols {
 4. **Logging**: All operations should be logged for audit trails
 5. **Security**: Never log passwords or sensitive configuration data
 6. **Compatibility**: Maintain backward compatibility with existing commands
+
+## Implementation Notes (2025-06-29)
+
+### Architecture Decisions Made
+
+1. **Manager Pattern**: Created separate CommandManager and ConfigManager classes to orchestrate operations across multiple nodes, keeping the driver implementations focused on single-node operations.
+
+2. **Driver Registration**: Used a decorator-based registration system (`@register_driver`) that automatically registers drivers when imported, making it easy to add new vendors.
+
+3. **Error Handling**: Implemented comprehensive error handling at multiple levels:
+   - Driver level: Connection and operation errors
+   - Manager level: Orchestration and parallel execution errors
+   - CLI level: User-friendly error messages
+
+4. **Progress Tracking**: Used the `rich` library for beautiful progress indicators during parallel operations, with quiet mode support for scripting.
+
+5. **Output Formats**: Implemented three output formats (text, table, JSON) to support different use cases:
+   - Text: Human-readable detailed output
+   - Table: Quick overview of results
+   - JSON: Machine-parsable for integration
+
+### Implementation Challenges & Solutions
+
+1. **Import Management**: PyEZ may not be installed for all users, so wrapped the import in try/except to allow graceful degradation.
+
+2. **Parallel Execution**: Used ThreadPoolExecutor with configurable max_workers to balance performance and resource usage.
+
+3. **Configuration Validation**: For device files, implemented validation by loading config and rolling back if dry-run mode is enabled.
+
+4. **Connection Management**: Used context managers throughout to ensure connections are properly closed even on errors.
+
+### Code Quality Measures
+
+1. **Type Hints**: Used throughout for better IDE support and documentation
+2. **Docstrings**: Comprehensive docstrings for all public methods
+3. **Dataclasses**: Used for result objects to ensure consistency
+4. **Enums**: Used for configuration formats and methods to prevent typos
+
+### Testing Considerations
+
+1. **Driver Mocking**: PyEZ Device objects need to be mocked for unit tests
+2. **Integration Tests**: Can use containerlab environments for real device testing
+3. **CLI Tests**: Click's CliRunner can be used for command testing
+
+### Future Enhancements
+
+1. **Additional Drivers**:
+   - Nokia SR Linux (using gNMI/JSON-RPC)
+   - Arista cEOS (using eAPI)
+   - Cisco IOS-XR (using NETCONF)
+
+2. **Configuration Templates**: Add Jinja2 template support for dynamic configs
+
+3. **Rollback History**: Track and display rollback history for each node
+
+4. **Bulk Operations**: Add support for bulk command files and configuration directories
+
+5. **Authentication**: Integrate with credential vaults (HashiCorp Vault, etc.)
+
+### Performance Optimizations
+
+1. **Connection Pooling**: Future enhancement to reuse connections across operations
+2. **Lazy Loading**: Drivers are only imported when needed
+3. **Parallel by Default**: Operations run in parallel unless explicitly set to sequential
+
+### Security Considerations
+
+1. **No Password Logging**: Passwords are never logged or displayed
+2. **SSH Key Support**: Prefer SSH keys over passwords when available
+3. **Timeout Protection**: All operations have configurable timeouts
+4. **Input Validation**: Command and file inputs are validated before execution
