@@ -257,10 +257,26 @@ def exec_command(
             target_nodes.append(target_node)
 
     elif all_nodes:
-        target_nodes = db.get_all_nodes()
-        if not target_nodes:
+        all_nodes_list = db.get_all_nodes()
+        if not all_nodes_list:
             handle_error("No nodes found in current lab")
             return
+
+        # Filter out bridge nodes from --all execution
+        target_nodes = [
+            n
+            for n in all_nodes_list
+            if not n.kind.startswith("bridge") and not n.name.startswith("br-")
+        ]
+
+        if not target_nodes:
+            handle_error("No executable nodes found (bridges are skipped)")
+            return
+
+        # Log how many nodes were skipped if any
+        skipped_count = len(all_nodes_list) - len(target_nodes)
+        if skipped_count > 0 and not quiet:
+            click.echo(f"Skipping {skipped_count} bridge node(s)")
 
     # Initialize command manager
     cmd_manager = CommandManager(quiet=quiet)
@@ -415,10 +431,26 @@ def config_command(
             target_nodes.append(target_node)
 
     elif all_nodes:
-        target_nodes = db.get_all_nodes()
-        if not target_nodes:
+        all_nodes_list = db.get_all_nodes()
+        if not all_nodes_list:
             handle_error("No nodes found in current lab")
             return
+
+        # Filter out bridge nodes from --all execution
+        target_nodes = [
+            n
+            for n in all_nodes_list
+            if not n.kind.startswith("bridge") and not n.name.startswith("br-")
+        ]
+
+        if not target_nodes:
+            handle_error("No configurable nodes found (bridges are skipped)")
+            return
+
+        # Log how many nodes were skipped if any
+        skipped_count = len(all_nodes_list) - len(target_nodes)
+        if skipped_count > 0 and not quiet:
+            click.echo(f"Skipping {skipped_count} bridge node(s)")
 
     # Initialize config manager
     config_manager = ConfigManager(quiet=quiet)

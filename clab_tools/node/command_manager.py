@@ -11,6 +11,7 @@ from rich.table import Table
 
 # Import drivers package to register all drivers
 import clab_tools.node.drivers  # noqa: F401
+from clab_tools.config.settings import get_settings
 from clab_tools.db.models import Node
 from clab_tools.node.drivers.base import CommandResult, ConnectionParams
 from clab_tools.node.drivers.registry import DriverRegistry
@@ -161,14 +162,23 @@ class CommandManager:
         Returns:
             CommandResult
         """
+        # Get settings for fallback credentials
+        settings = get_settings()
+
+        # Resolve credentials with proper fallbacks
+        username = (
+            getattr(node, "username", None) or settings.node.default_username or "admin"
+        )
+        password = getattr(node, "password", None) or settings.node.default_password
+
         # Create connection parameters
         conn_params = ConnectionParams(
             host=node.mgmt_ip,
-            username=node.username or "admin",
-            password=node.password,
-            port=node.ssh_port or 22,
-            timeout=30,
-            vendor=node.vendor,
+            username=username,
+            password=password,
+            port=getattr(node, "ssh_port", None) or settings.node.ssh_port or 22,
+            timeout=timeout or settings.node.connection_timeout or 30,
+            vendor=getattr(node, "vendor", None),
             device_type=node.kind,
         )
 

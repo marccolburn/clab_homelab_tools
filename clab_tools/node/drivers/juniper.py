@@ -1,7 +1,11 @@
 """Juniper PyEZ driver implementation."""
 
+import io
 import logging
+import os
 import time
+import warnings
+from contextlib import redirect_stderr
 from typing import Any, Dict, List, Optional, Tuple
 
 from jnpr.junos import Device
@@ -24,7 +28,37 @@ from clab_tools.node.drivers.base import (
 )
 from clab_tools.node.drivers.registry import register_driver
 
+# Set environment variable to suppress warnings
+os.environ["PYTHONWARNINGS"] = "ignore::RuntimeWarning:jnpr.junos.device"
+
+# More aggressive warning suppression
+warnings.simplefilter("ignore", RuntimeWarning)
+warnings.filterwarnings("ignore", category=RuntimeWarning)
+warnings.filterwarnings("ignore", message=".*CLI command is for debug use only.*")
+warnings.filterwarnings("ignore", module="jnpr.junos.device")
+
 logger = logging.getLogger(__name__)
+
+
+def _configure_pyez_logging():
+    """Configure PyEZ and related library logging to reduce verbose output."""
+    # Suppress ncclient NETCONF XML logging (main source of verbose output)
+    logging.getLogger("ncclient.transport.ssh").setLevel(logging.WARNING)
+    logging.getLogger("ncclient.transport.session").setLevel(logging.WARNING)
+    logging.getLogger("ncclient.operations.rpc").setLevel(logging.WARNING)
+    logging.getLogger("ncclient.transport.parser").setLevel(logging.WARNING)
+
+    # Suppress PyEZ device logging
+    logging.getLogger("jnpr.junos.device").setLevel(logging.WARNING)
+    logging.getLogger("jnpr.junos.rpcmeta").setLevel(logging.WARNING)
+
+    # Suppress paramiko SSH logging
+    logging.getLogger("paramiko.transport").setLevel(logging.WARNING)
+    logging.getLogger("paramiko.transport.sftp").setLevel(logging.WARNING)
+
+
+# Configure logging when module is imported
+_configure_pyez_logging()
 
 
 @register_driver("JuniperPyEZDriver")
@@ -73,7 +107,7 @@ class JuniperPyEZDriver(BaseNodeDriver):
             self.config = Config(self.device)
 
             self._connected = True
-            logger.info(f"Connected to {self.connection_params.host}")
+            logger.debug(f"Connected to {self.connection_params.host}")
 
         except ConnectError as e:
             raise ConnectionError(f"Failed to connect: {e}")
@@ -83,9 +117,9 @@ class JuniperPyEZDriver(BaseNodeDriver):
         if self.device and self._connected:
             try:
                 self.device.close()
-                logger.info(f"Disconnected from {self.connection_params.host}")
+                logger.debug(f"Disconnected from {self.connection_params.host}")
             except Exception as e:
-                logger.warning(f"Error during disconnect: {e}")
+                logger.debug(f"Error during disconnect: {e}")
             finally:
                 self._connected = False
                 self.device = None
@@ -107,6 +141,11 @@ class JuniperPyEZDriver(BaseNodeDriver):
         Returns:
             CommandResult with output
         """
+        # Additional warning suppression for this method
+        warnings.filterwarnings(
+            "ignore", category=RuntimeWarning, module="jnpr.junos.device"
+        )
+
         if not self.is_connected():
             raise ConnectionError("Not connected to device")
 
@@ -115,8 +154,14 @@ class JuniperPyEZDriver(BaseNodeDriver):
         try:
             # Handle different command types
             if command.startswith("show"):
-                # Use CLI for show commands
-                output = self.device.cli(command, timeout=timeout or 30)
+                # Use CLI for show commands (PyEZ cli() doesn't accept timeout)
+                # Note: timeout parameter is not used by PyEZ cli() method
+                # Temporarily redirect stderr to suppress PyEZ warning
+                stderr_buffer = io.StringIO()
+                with redirect_stderr(stderr_buffer):
+                    with warnings.catch_warnings():
+                        warnings.simplefilter("ignore")
+                        output = self.device.cli(command)
             else:
                 # Try RPC for other commands
                 output = self._execute_rpc_command(command)
