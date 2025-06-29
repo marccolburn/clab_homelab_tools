@@ -10,6 +10,8 @@ from rich.console import Console
 from rich.progress import Progress, SpinnerColumn, TextColumn
 from rich.table import Table
 
+# Import drivers package to register all drivers
+import clab_tools.node.drivers  # noqa: F401
 from clab_tools.db.models import Node
 from clab_tools.node.drivers.base import (
     ConfigFormat,

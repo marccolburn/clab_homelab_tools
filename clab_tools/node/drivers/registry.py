@@ -37,6 +37,8 @@ class DriverRegistry:
             cls._device_type_mappings[device_type.lower()] = driver_name
 
         logger.debug(f"Registered driver: {driver_name}")
+        logger.debug(f"Vendor mappings: {cls._vendor_mappings}")
+        logger.debug(f"Device type mappings: {cls._device_type_mappings}")
 
     @classmethod
     def get_driver_class(cls, name: str) -> Optional[Type[BaseNodeDriver]]:
@@ -77,7 +79,12 @@ class DriverRegistry:
         Returns:
             Driver class or None if not found
         """
+        logger.debug(f"Looking for device_type: {device_type}")
+        logger.debug(
+            f"Available device types: {list(cls._device_type_mappings.keys())}"
+        )
         driver_name = cls._device_type_mappings.get(device_type.lower())
+        logger.debug(f"Found driver_name: {driver_name}")
         if driver_name:
             return cls._drivers.get(driver_name)
         return None
