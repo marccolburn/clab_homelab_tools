@@ -41,8 +41,10 @@ class TestCommandManager:
     @patch("clab_tools.node.command_manager.DriverRegistry")
     def test_execute_command_single_node(self, mock_registry, mock_nodes):
         """Test command execution on single node."""
-        # Setup mock driver
+        # Setup mock driver with context manager support
         mock_driver = Mock()
+        mock_driver.__enter__ = Mock(return_value=mock_driver)
+        mock_driver.__exit__ = Mock(return_value=None)
         mock_driver.execute_command.return_value = CommandResult(
             node_name="router1",
             command="show version",
@@ -79,6 +81,8 @@ class TestCommandManager:
         mock_drivers = []
         for i, node in enumerate(mock_nodes):
             driver = Mock()
+            driver.__enter__ = Mock(return_value=driver)
+            driver.__exit__ = Mock(return_value=None)
             driver.execute_command.return_value = CommandResult(
                 node_name=node.name,
                 command="show interfaces",
@@ -162,7 +166,8 @@ class TestCommandManager:
     def test_execute_command_connection_failure(self, mock_registry, mock_nodes):
         """Test handling connection failure."""
         mock_driver = Mock()
-        mock_driver.__enter__.side_effect = ConnectionError("Connection refused")
+        mock_driver.__enter__ = Mock(side_effect=ConnectionError("Connection refused"))
+        mock_driver.__exit__ = Mock(return_value=None)
         mock_registry.create_driver.return_value = mock_driver
 
         manager = CommandManager(quiet=True)
@@ -176,6 +181,8 @@ class TestCommandManager:
     def test_execute_command_execution_error(self, mock_registry, mock_nodes):
         """Test handling command execution error."""
         mock_driver = Mock()
+        mock_driver.__enter__ = Mock(return_value=mock_driver)
+        mock_driver.__exit__ = Mock(return_value=None)
         mock_driver.execute_command.side_effect = Exception("Command failed")
         mock_registry.create_driver.return_value = mock_driver
 
@@ -208,6 +215,8 @@ class TestCommandManager:
         # No username, password, or ssh_port attributes
 
         mock_driver = Mock()
+        mock_driver.__enter__ = Mock(return_value=mock_driver)
+        mock_driver.__exit__ = Mock(return_value=None)
         mock_driver.execute_command.return_value = CommandResult(
             node_name="router1",
             command="show version",
@@ -252,7 +261,7 @@ class TestCommandManager:
         ]
 
         manager = CommandManager(quiet=True)
-        output = manager.format_results(results, format="text")
+        output = manager.format_results(results, output_format="text")
 
         assert "router1" in output
         assert "JunOS 20.4R3" in output
@@ -273,7 +282,7 @@ class TestCommandManager:
         ]
 
         manager = CommandManager(quiet=True)
-        output = manager.format_results(results, format="json")
+        output = manager.format_results(results, output_format="json")
 
         import json
 
@@ -302,7 +311,7 @@ class TestCommandManager:
         mock_table.return_value = mock_table_instance
 
         manager = CommandManager(quiet=True)
-        manager.format_results(results, format="table")
+        manager.format_results(results, output_format="table")
 
         # Verify table was created and rows were added
         mock_table.assert_called_once()
