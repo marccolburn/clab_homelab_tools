@@ -5,9 +5,11 @@ Handles operations on individual containerlab nodes including file uploads
 and command execution via SSH.
 """
 
+import os
 from pathlib import Path
 from typing import List, Optional, Tuple
 
+import click
 import paramiko
 from scp import SCPClient
 
@@ -27,6 +29,73 @@ class NodeManager:
     def __init__(self, node_settings: NodeSettings):
         """Initialize the NodeManager with node settings."""
         self.settings = node_settings
+        self._progress_bar = None
+        self._last_file_name = None
+        self._total_files = 0
+        self._files_completed = 0
+        self._is_directory_upload = False
+
+    def _count_files_in_directory(self, directory: Path) -> int:
+        """Count total number of files in a directory recursively."""
+        count = 0
+        for item in directory.rglob("*"):
+            if item.is_file():
+                count += 1
+        return count
+
+    def _progress_callback(self, filename: bytes, size: int, sent: int) -> None:
+        """Progress callback for SCP transfers."""
+        # Convert filename from bytes to string
+        if isinstance(filename, bytes):
+            filename = filename.decode("utf-8")
+
+        # Get just the base filename
+        base_filename = os.path.basename(filename)
+
+        if self._is_directory_upload:
+            # For directory uploads, track file completion
+            if base_filename != self._last_file_name:
+                # Starting a new file
+                if self._last_file_name is not None:
+                    # Previous file completed
+                    self._files_completed += 1
+                    if self._progress_bar:
+                        self._progress_bar.update(1)
+
+                self._last_file_name = base_filename
+
+                # Show current file being uploaded
+                if self._progress_bar:
+                    # Clear the line and show file info
+                    msg = (
+                        f"\r  [{self._files_completed + 1}/{self._total_files}] "
+                        f"Uploading: {base_filename}"
+                    )
+                    click.echo(f"{msg:<80}", nl=False)
+
+            # Check if this is the last chunk of the current file
+            if sent == size and self._files_completed < self._total_files - 1:
+                # File transfer complete, but not the last file
+                pass
+        else:
+            # For single file uploads, show file progress
+            if base_filename != self._last_file_name:
+                if self._progress_bar:
+                    self._progress_bar.finish()
+                self._progress_bar = click.progressbar(
+                    length=size,
+                    label=f"  Uploading {base_filename}",
+                    show_percent=True,
+                    show_pos=True,
+                    width=0,  # Auto-width
+                    bar_template="%(label)s  [%(bar)s]  %(info)s",
+                )
+                self._last_file_name = base_filename
+                self._progress_bar.__enter__()
+
+            # Update progress
+            if self._progress_bar:
+                self._progress_bar.update(sent - self._progress_bar.pos)
 
     def _connect_to_node(
         self,
@@ -93,12 +162,25 @@ class NodeManager:
                 management_ip, username, password, private_key_path
             )
 
-            with SCPClient(ssh.get_transport()) as scp:
+            with SCPClient(
+                ssh.get_transport(), progress=self._progress_callback
+            ) as scp:
                 scp.put(str(local_file), remote_path)
+
+            # Close progress bar if it exists
+            if self._progress_bar:
+                self._progress_bar.finish()
+                self._progress_bar = None
+                self._last_file_name = None
 
             return True
 
         except Exception as e:
+            # Clean up progress bar on error
+            if self._progress_bar:
+                self._progress_bar.finish()
+                self._progress_bar = None
+                self._last_file_name = None
             raise NodeConnectionError(f"Failed to upload file to {management_ip}: {e}")
         finally:
             if ssh:
@@ -116,16 +198,65 @@ class NodeManager:
         """Upload a directory and its contents to a node."""
         ssh = None
         try:
+            # Set up directory upload tracking
+            self._is_directory_upload = True
+            self._total_files = self._count_files_in_directory(local_dir)
+            self._files_completed = 0
+            self._last_file_name = None
+
+            # Create progress bar for total files
+            if self._total_files > 0:
+                click.echo(f"  Found {self._total_files} files to upload")
+                self._progress_bar = click.progressbar(
+                    length=self._total_files,
+                    label="  Uploading directory",
+                    show_percent=True,
+                    show_pos=True,
+                    width=0,
+                    bar_template="%(label)s  [%(bar)s]  %(info)s",
+                )
+                self._progress_bar.__enter__()
+
             ssh = self._connect_to_node(
                 management_ip, username, password, private_key_path
             )
 
-            with SCPClient(ssh.get_transport()) as scp:
+            with SCPClient(
+                ssh.get_transport(), progress=self._progress_callback
+            ) as scp:
                 scp.put(str(local_dir), remote_path, recursive=True)
+
+            # Close progress bar if it exists
+            if self._progress_bar:
+                # Count the last file
+                if self._last_file_name is not None:
+                    self._files_completed += 1
+                    self._progress_bar.update(1)
+                self._progress_bar.finish()
+                click.echo()  # New line after progress
+                self._progress_bar = None
+
+            # Reset state
+            self._is_directory_upload = False
+            self._last_file_name = None
+            self._files_completed = 0
+            self._total_files = 0
 
             return True
 
         except Exception as e:
+            # Clean up progress bar on error
+            if self._progress_bar:
+                self._progress_bar.finish()
+                click.echo()  # New line after progress
+                self._progress_bar = None
+
+            # Reset state
+            self._is_directory_upload = False
+            self._last_file_name = None
+            self._files_completed = 0
+            self._total_files = 0
+
             raise NodeConnectionError(
                 f"Failed to upload directory to {management_ip}: {e}"
             )
@@ -200,11 +331,17 @@ class NodeManager:
         nodes = self.get_nodes_by_criteria(db, node_name, kind, nodes_list, all_nodes)
         results = []
 
-        for node_name, node_kind, mgmt_ip in nodes:
+        # Show total count if multiple nodes
+        if len(nodes) > 1:
+            click.echo(f"\nUploading to {len(nodes)} nodes...")
+
+        for i, node in enumerate(nodes, 1):
+            if len(nodes) > 1:
+                click.echo(f"\n[{i}/{len(nodes)}] Node: {node.name} ({node.mgmt_ip})")
             try:
                 if is_directory:
                     success = self.upload_directory_to_node(
-                        mgmt_ip,
+                        node.mgmt_ip,
                         local_source,
                         remote_dest,
                         username,
@@ -213,7 +350,7 @@ class NodeManager:
                     )
                 else:
                     success = self.upload_file_to_node(
-                        mgmt_ip,
+                        node.mgmt_ip,
                         local_source,
                         remote_dest,
                         username,
@@ -223,12 +360,14 @@ class NodeManager:
 
                 if success:
                     results.append(
-                        (node_name, True, f"Successfully uploaded to {mgmt_ip}")
+                        (node.name, True, f"Successfully uploaded to {node.mgmt_ip}")
                     )
                 else:
-                    results.append((node_name, False, f"Upload failed to {mgmt_ip}"))
+                    results.append(
+                        (node.name, False, f"Upload failed to {node.mgmt_ip}")
+                    )
 
             except Exception as e:
-                results.append((node_name, False, str(e)))
+                results.append((node.name, False, str(e)))
 
         return results
