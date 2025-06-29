@@ -2,38 +2,25 @@
 
 This document provides a comprehensive guide to the clab-tools codebase for AI assistants working on this project.
 
-## CURRENT TASK STATUS (Updated 2025-06-28)
+## CURRENT STATUS (v1.1.1 - Released 2025-06-29)
 
-Working on feature branch: `feature/scripting-and-automation`
+### ✅ Latest Fixes (v1.1.1):
+1. **Node upload fix** - Fixed "cannot unpack non-iterable Node object" error
+2. **Progress bars** - Added file upload progress indicators:
+   - Single files show byte-level progress
+   - Directories show file count progress (X of Y files)
+3. **Topology commands** - Fixed Path handling for both Path objects and strings
+4. **Documentation** - Added all missing environment variables to configuration.md
 
-### ✅ Completed Features:
+### ✅ Major Features (v1.1.0):
 1. **Global `--quiet` flag** for non-interactive scripting
 2. **`topology start/stop` commands** with local-first behavior
 3. **`node upload` command** for file/directory uploads to nodes
 4. **`lab bootstrap/teardown` commands** for complete workflows
 5. **Logging configuration** - Added `logging.enabled` option to disable JSON logs
 
-### ✅ Documentation Updates (ALL COMPLETED):
-- commands.md: Added all new commands with examples
-- user-guide.md: Added scripting, node management, lifecycle sections
-- configuration.md: Added node settings, environment variables
-- getting-started.md: Added bootstrap quick start, config prerequisites
-- remote-setup.md: Added start/stop remote behavior, node uploads
-
-### ✅ All Tests Passing (2025-06-28):
-**Successfully fixed all test failures - 214/214 tests passing!**
-
-1. **Import path fixes** - Updated `generate_topology` → `topology_commands`
-2. **Bootstrap/teardown assertions** - Fixed to match actual CLI output
-3. **Node upload error messages** - Updated to match exact error format
-4. **Bootstrap command** - Fixed to use `--clear-existing` instead of `--force`
-5. **Quiet mode tests** - Fixed to not expect output in quiet mode
-6. **Final fixes** - Removed `required=True` from `--source` option and used `handle_error(..., exit_code=0)` for proper error handling
-
-### ✅ Code Quality:
-- All pre-commit hooks passing (black, isort, flake8, etc.)
-- No formatting or linting issues
-- All imports properly placed at module level (never inside functions)
+### ✅ All Tests Passing:
+**214/214 tests passing with 71% code coverage**
 
 ### Key Implementation Details:
 - Commands check `ctx.obj.get("quiet", False)` for quiet mode
