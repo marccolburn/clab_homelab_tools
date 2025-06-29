@@ -4,6 +4,52 @@ This document provides a comprehensive guide to the clab-tools codebase for AI a
 
 ## CURRENT STATUS (v1.1.1 - Released 2025-06-29)
 
+### 🚧 IN DEVELOPMENT (feature/node-exec-config-commands branch):
+**New Node Management Commands with Vendor-Agnostic Drivers**
+
+1. **`node exec` command** - Execute operational commands on network devices
+   - Vendor-agnostic driver architecture with PyEZ for Juniper
+   - Parallel/sequential execution across multiple nodes
+   - Flexible node targeting (by name, kind, list, all)
+   - Multiple output formats (text, table, JSON)
+   - Command timeout and error handling
+
+2. **`node config` command** - Load configurations to network devices
+   - Support for local files (`--file`) and device files (`--device-file`)
+   - Multiple load methods: override, merge, replace
+   - Dry-run capability for configuration validation
+   - Configuration diff display and rollback support
+   - Parallel loading with progress tracking
+
+3. **Vendor Driver System** - Extensible architecture for multiple vendors
+   - Abstract base driver interface for vendor implementations
+   - Driver registry with automatic vendor detection
+   - Starting with Juniper PyEZ driver (supports vJunos, vMX, vSRX, etc.)
+   - Planned support for Nokia SR Linux, Arista cEOS, Cisco IOS-XR
+
+4. **Enhanced Database Schema** - Extended Node model for config management
+   - Vendor, model, OS version tracking
+   - Configuration metadata and history
+   - Last command execution tracking
+   - Credential profile support
+
+**Key Implementation Files (In Development):**
+- `clab_tools/node/drivers/` - Vendor-specific driver implementations
+- `clab_tools/node/command_manager.py` - Command execution management
+- `clab_tools/node/config_manager.py` - Configuration loading management
+- `implementation-plan.md` - Detailed technical specification
+
+**Usage Examples (Coming Soon):**
+```bash
+# Execute commands
+clab-tools node exec -c "show ospf neighbor" --kind juniper_vjunosrouter
+clab-tools node exec -c "show version" --all --output-format json
+
+# Load configurations
+clab-tools node config -f router.conf --node router1 --dry-run
+clab-tools node config -d /tmp/device-config.txt --all --method merge
+```
+
 ### ✅ Latest Fixes (v1.1.1):
 1. **Node upload fix** - Fixed "cannot unpack non-iterable Node object" error
 2. **Progress bars** - Added file upload progress indicators:
@@ -78,9 +124,14 @@ clab-tools bridge create-bridge br-mgmt     # Manual creation
 clab-tools bridge configure
 clab-tools bridge list
 
-# Node management
+# Node management (current)
 clab-tools node upload --node router1 --source config.txt --dest /tmp/config.txt
 clab-tools node upload --all --source-dir configs/ --dest /etc/
+
+# Node management (in development)
+clab-tools node exec -c "show ospf neighbor" --kind juniper_vjunosrouter
+clab-tools node config -f router.conf --node router1 --dry-run
+clab-tools node config -d /tmp/device-config.txt --all --method merge
 
 # Remote operations
 clab-tools remote test-connection
@@ -328,11 +379,49 @@ bridge_manager.create_bridge(
 - Support for custom VLAN filtering, STP, interfaces, VLAN ranges
 - Maintained backward compatibility with topology-based creation
 
+## Current Development: Node Command & Configuration Management
+
+### 🚧 Implementation Status (feature/node-exec-config-commands)
+
+**Architecture Design Completed:**
+- Vendor-agnostic driver system with abstract base interface
+- Driver registry for automatic vendor detection and routing
+- Command and configuration managers for orchestration
+- Enhanced database schema for metadata tracking
+
+**Key Design Decisions:**
+1. **PyEZ Integration**: Using Juniper's native PyEZ library for robust JunOS interaction
+2. **Dual Configuration Sources**: Support both local files and device filesystem files
+3. **Parallel Execution**: Concurrent operations across multiple nodes with progress tracking
+4. **Vendor Abstraction**: Driver pattern allows easy addition of new vendors
+
+**Implementation Files Created:**
+- `implementation-plan.md` - Complete technical specification and architecture
+- Database schema extensions for Node model (vendor, config metadata)
+- Driver interface definitions with Juniper PyEZ implementation
+- Command and configuration manager classes
+- Enhanced CLI commands with rich output formatting
+
+**Next Steps for Implementation:**
+1. Create driver infrastructure (`clab_tools/node/drivers/`)
+2. Implement Juniper PyEZ driver with connection management
+3. Build command and configuration managers
+4. Add enhanced CLI commands with dual file source support
+5. Extend database schema and migrations
+6. Create comprehensive test suite with mocked PyEZ operations
+
+**Testing Strategy:**
+- Mock PyEZ Device connections for unit tests
+- Integration tests with containerlab environments
+- Driver-specific test suites for each vendor
+- CLI command testing with various input scenarios
+
 ## Future Extensions
 
 The refactored architecture supports:
 - Plugin system for additional commands
-- Router configuration management (push configs to containerized nodes)
+- Multiple vendor drivers (Nokia SR Linux, Arista cEOS, Cisco IOS-XR)
+- Configuration template system with Jinja2
 - Enhanced topology validation
 - Additional bridge management features
 
