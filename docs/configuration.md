@@ -53,7 +53,7 @@ The main configuration file defines project-wide settings:
 project:
   name: "my-homelab"
   description: "My containerlab homelab setup"
-  version: "1.1.0"
+  version: "1.1.1"
 
 # Default Node Settings
 defaults:
@@ -97,7 +97,7 @@ bridges:
 |---------|-------------|---------|---------|
 | `project.name` | Project identifier | `"homelab"` | `"datacenter-sim"` |
 | `project.description` | Project description | `""` | `"Network simulation"` |
-| `project.version` | Project version | `"1.1.0"` | `"2.1.0"` |
+| `project.version` | Project version | `"1.1.1"` | `"2.1.0"` |
 
 ### Database Settings
 
@@ -241,19 +241,75 @@ This ensures your lab selection persists across terminal sessions and command in
 
 Override any configuration setting using environment variables with the `CLAB_` prefix:
 
+### General Settings
 | Variable | Description | Example |
 |----------|-------------|---------|
 | `CLAB_CONFIG_FILE` | Override config file discovery | `export CLAB_CONFIG_FILE="./prod-config.yaml"` |
 | `CLAB_DEBUG` | Enable debug mode | `export CLAB_DEBUG=true` |
-| `CLAB_DB_URL` | Override database URL | `export CLAB_DB_URL="sqlite:///custom.db"` |
-| `CLAB_LAB_CURRENT_LAB` | Override current lab | `export CLAB_LAB_CURRENT_LAB="test-lab"` |
-| `CLAB_TOPOLOGY_DEFAULT_PREFIX` | Override topology prefix | `export CLAB_TOPOLOGY_DEFAULT_PREFIX="mylab"` |
+
+### Database Settings
+| Variable | Description | Example |
+|----------|-------------|---------|
+| `CLAB_DB_URL` | Database URL | `export CLAB_DB_URL="sqlite:///custom.db"` |
+| `CLAB_DB_ECHO` | Enable SQL echo logging | `export CLAB_DB_ECHO=true` |
+| `CLAB_DB_POOL_PRE_PING` | Enable connection pool pre-ping | `export CLAB_DB_POOL_PRE_PING=false` |
+
+### Lab Settings
+| Variable | Description | Example |
+|----------|-------------|---------|
+| `CLAB_LAB_CURRENT_LAB` | Current active lab | `export CLAB_LAB_CURRENT_LAB="test-lab"` |
+| `CLAB_LAB_USE_GLOBAL_DATABASE` | Use global database | `export CLAB_LAB_USE_GLOBAL_DATABASE=true` |
+| `CLAB_LAB_GLOBAL_DATABASE_PATH` | Global database path | `export CLAB_LAB_GLOBAL_DATABASE_PATH="/home/user/.clab"` |
+| `CLAB_LAB_AUTO_CREATE_LAB` | Auto-create missing labs | `export CLAB_LAB_AUTO_CREATE_LAB=false` |
+
+### Logging Settings
+| Variable | Description | Example |
+|----------|-------------|---------|
 | `CLAB_LOG_ENABLED` | Enable/disable logging | `export CLAB_LOG_ENABLED=false` |
-| `CLAB_LOG_LEVEL` | Override log level | `export CLAB_LOG_LEVEL=DEBUG` |
-| `CLAB_QUIET` | Enable quiet mode | `export CLAB_QUIET=true` |
-| `CLAB_NODE_DEFAULT_USERNAME` | Node SSH username | `export CLAB_NODE_DEFAULT_USERNAME="admin"` |
-| `CLAB_NODE_PRIVATE_KEY_PATH` | Node SSH key path | `export CLAB_NODE_PRIVATE_KEY_PATH="~/.ssh/node_key"` |
+| `CLAB_LOG_LEVEL` | Log level | `export CLAB_LOG_LEVEL=DEBUG` |
+| `CLAB_LOG_FORMAT` | Log format (json/console) | `export CLAB_LOG_FORMAT=console` |
+| `CLAB_LOG_FILE_PATH` | Log file path | `export CLAB_LOG_FILE_PATH="/var/log/clab-tools.log"` |
+| `CLAB_LOG_MAX_FILE_SIZE` | Max log file size in bytes | `export CLAB_LOG_MAX_FILE_SIZE=20971520` |
+| `CLAB_LOG_BACKUP_COUNT` | Number of log file backups | `export CLAB_LOG_BACKUP_COUNT=10` |
+
+### Topology Settings
+| Variable | Description | Example |
+|----------|-------------|---------|
+| `CLAB_TOPOLOGY_DEFAULT_PREFIX` | Default topology prefix | `export CLAB_TOPOLOGY_DEFAULT_PREFIX="mylab"` |
+| `CLAB_TOPOLOGY_DEFAULT_TOPOLOGY_NAME` | Default topology name | `export CLAB_TOPOLOGY_DEFAULT_TOPOLOGY_NAME="production"` |
+| `CLAB_TOPOLOGY_DEFAULT_MGMT_NETWORK` | Default management network | `export CLAB_TOPOLOGY_DEFAULT_MGMT_NETWORK="mgmt"` |
+| `CLAB_TOPOLOGY_DEFAULT_MGMT_SUBNET` | Default management subnet | `export CLAB_TOPOLOGY_DEFAULT_MGMT_SUBNET="10.0.0.0/24"` |
+| `CLAB_TOPOLOGY_TEMPLATE_PATH` | Topology template path | `export CLAB_TOPOLOGY_TEMPLATE_PATH="custom_template.j2"` |
+| `CLAB_TOPOLOGY_OUTPUT_DIR` | Output directory | `export CLAB_TOPOLOGY_OUTPUT_DIR="/tmp/topologies"` |
+
+### Bridge Settings
+| Variable | Description | Example |
+|----------|-------------|---------|
+| `CLAB_BRIDGE_BRIDGE_PREFIX` | Bridge name prefix | `export CLAB_BRIDGE_BRIDGE_PREFIX="lab-br"` |
+| `CLAB_BRIDGE_CLEANUP_ON_EXIT` | Cleanup bridges on exit | `export CLAB_BRIDGE_CLEANUP_ON_EXIT=true` |
+
+### Remote Host Settings
+| Variable | Description | Example |
+|----------|-------------|---------|
+| `CLAB_REMOTE_ENABLED` | Enable remote operations | `export CLAB_REMOTE_ENABLED=true` |
+| `CLAB_REMOTE_HOST` | Remote host IP/hostname | `export CLAB_REMOTE_HOST="192.168.1.100"` |
+| `CLAB_REMOTE_PORT` | SSH port | `export CLAB_REMOTE_PORT=2222` |
+| `CLAB_REMOTE_USERNAME` | SSH username | `export CLAB_REMOTE_USERNAME="labuser"` |
+| `CLAB_REMOTE_PASSWORD` | SSH password | `export CLAB_REMOTE_PASSWORD="secret"` |
+| `CLAB_REMOTE_PRIVATE_KEY_PATH` | SSH private key path | `export CLAB_REMOTE_PRIVATE_KEY_PATH="~/.ssh/lab_key"` |
 | `CLAB_REMOTE_TOPOLOGY_REMOTE_DIR` | Remote topology directory | `export CLAB_REMOTE_TOPOLOGY_REMOTE_DIR="/opt/topologies"` |
+| `CLAB_REMOTE_TIMEOUT` | SSH connection timeout | `export CLAB_REMOTE_TIMEOUT=60` |
+| `CLAB_REMOTE_USE_SUDO` | Use sudo for commands | `export CLAB_REMOTE_USE_SUDO=false` |
+| `CLAB_REMOTE_SUDO_PASSWORD` | Sudo password | `export CLAB_REMOTE_SUDO_PASSWORD="sudopass"` |
+
+### Node Settings
+| Variable | Description | Example |
+|----------|-------------|---------|
+| `CLAB_NODE_DEFAULT_USERNAME` | Default node SSH username | `export CLAB_NODE_DEFAULT_USERNAME="admin"` |
+| `CLAB_NODE_DEFAULT_PASSWORD` | Default node SSH password | `export CLAB_NODE_DEFAULT_PASSWORD="nodepass"` |
+| `CLAB_NODE_SSH_PORT` | Default SSH port for nodes | `export CLAB_NODE_SSH_PORT=830` |
+| `CLAB_NODE_CONNECTION_TIMEOUT` | SSH connection timeout | `export CLAB_NODE_CONNECTION_TIMEOUT=45` |
+| `CLAB_NODE_PRIVATE_KEY_PATH` | Default SSH private key | `export CLAB_NODE_PRIVATE_KEY_PATH="~/.ssh/node_key"` |
 
 ### Environment Variable Naming
 

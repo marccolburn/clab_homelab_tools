@@ -209,16 +209,16 @@ The project uses centralized version management:
 ./scripts/version.sh get
 
 # Update version (follows semantic versioning)
-./scripts/version.sh set 1.1.0
+./scripts/version.sh set 1.1.1
 
 # Check version consistency
 ./scripts/version.sh check
 ```
 
 **Version update process:**
-1. Update version: `./scripts/version.sh set 1.1.0`
-2. Commit changes: `git add . && git commit -m "release: version 1.1.0"`
-3. Create tag: `git tag v1.1.0`
+1. Update version: `./scripts/version.sh set 1.1.1`
+2. Commit changes: `git add . && git commit -m "release: version 1.1.1"`
+3. Create tag: `git tag v1.1.1`
 4. Push: `git push && git push --tags`
 
 ### IDE Configuration
@@ -305,8 +305,8 @@ test: add integration tests for lab management
 ```bash
 # Update version in setup.py and __init__.py
 # Create release commit
-git commit -m "release: version 1.1.0"
-git tag v1.1.0
+git commit -m "release: version 1.1.1"
+git tag v1.1.1
 
 # Push release
 git push origin main --tags
