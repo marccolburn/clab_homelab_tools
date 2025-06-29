@@ -225,7 +225,12 @@ def start(ctx, topology_file, path, remote, local):
         else:
             # Use remote topology directory
             remote_dir = settings.remote.topology_remote_dir
-            topology_path = f"{remote_dir}/{topology_file.name}"
+            # Handle both Path objects and strings
+            if isinstance(topology_file, Path):
+                filename = topology_file.name
+            else:
+                filename = Path(topology_file).name
+            topology_path = f"{remote_dir}/{filename}"
 
         # Execute remote start
         try:
@@ -334,7 +339,12 @@ def stop(ctx, topology_file, path, remote, local):
         else:
             # Use remote topology directory
             remote_dir = settings.remote.topology_remote_dir
-            topology_path = f"{remote_dir}/{topology_file.name}"
+            # Handle both Path objects and strings
+            if isinstance(topology_file, Path):
+                filename = topology_file.name
+            else:
+                filename = Path(topology_file).name
+            topology_path = f"{remote_dir}/{filename}"
 
         # Execute remote stop
         try:
@@ -354,7 +364,11 @@ def stop(ctx, topology_file, path, remote, local):
                 else:
                     handle_error(f"Failed to stop topology (exit code: {exit_code})")
                     if stderr:
+                        click.echo("Error output:", err=True)
                         click.echo(stderr, err=True)
+                    if stdout:
+                        click.echo("Command output:", err=True)
+                        click.echo(stdout, err=True)
 
         except Exception as e:
             handle_error(f"Remote execution failed: {e}")
