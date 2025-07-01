@@ -111,8 +111,8 @@ def switch(ctx, lab_name: str):
     settings.lab.current_lab = lab_name
     ctx.obj["current_lab"] = lab_name
 
-    # Save settings to persist the change
-    if settings.save_to_file():
+    # Save only the current_lab setting to persist the change
+    if settings.update_config_setting("lab", "current_lab", lab_name):
         handle_success(f"Switched to lab '{lab_name}'")
     else:
         handle_success(

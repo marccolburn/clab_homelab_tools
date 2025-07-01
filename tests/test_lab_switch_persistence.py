@@ -4,12 +4,16 @@ Test Lab Switch Persistence
 Tests for lab switching settings persistence functionality.
 """
 
+import os
+import tempfile
 from pathlib import Path
 from unittest.mock import patch
 
 import yaml
+from click.testing import CliRunner
 
 from clab_tools.config.settings import Settings
+from clab_tools.main import cli
 
 
 class TestLabSwitchSettingsPersistence:
@@ -192,3 +196,109 @@ class TestLabSwitchSettingsPersistence:
                     updated_config = yaml.safe_load(f)
 
                 assert updated_config["lab"]["current_lab"] == "env_switched"
+
+    def test_lab_switch_does_not_expose_env_vars_or_defaults(self):
+        """Test lab switch only updates current_lab without exposing data."""
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".yaml", delete=False) as f:
+            # Create minimal config with only what user explicitly configured
+            original_config = {
+                "remote": {
+                    "enabled": True,
+                    "host": "10.1.91.4",
+                    "username": "testuser",
+                },
+                "lab": {"current_lab": "original_lab"},
+            }
+            yaml.dump(original_config, f)
+            config_file = f.name
+
+        try:
+            # Set environment variables that should NOT appear in config file
+            env_vars = {
+                "CLAB_REMOTE_PASSWORD": "secret123",
+                "CLAB_REMOTE_SUDO_PASSWORD": "sudo_secret",
+                "CLAB_NODE_DEFAULT_PASSWORD": "node_secret",
+                "CLAB_CONFIG_FILE": config_file,
+            }
+
+            with patch.dict(os.environ, env_vars):
+                # Switch to a new lab
+                runner = CliRunner()
+                result = runner.invoke(cli, ["lab", "switch", "new_lab"])
+
+                assert result.exit_code == 0
+                assert "Switched to lab 'new_lab'" in result.output
+
+                # Read the config file after switch
+                with open(config_file, "r") as f:
+                    updated_config = yaml.safe_load(f)
+
+                # Verify only current_lab was updated
+                assert updated_config["lab"]["current_lab"] == "new_lab"
+
+                # Verify original settings are preserved
+                assert updated_config["remote"]["enabled"] is True
+                assert updated_config["remote"]["host"] == "10.1.91.4"
+                assert updated_config["remote"]["username"] == "testuser"
+
+                # Verify sensitive environment variables are NOT in the file
+                assert "password" not in updated_config.get("remote", {})
+                assert "sudo_password" not in updated_config.get("remote", {})
+                assert "default_password" not in updated_config.get("node", {})
+
+                # Verify defaults are NOT added to the file
+                assert "node" not in updated_config  # Should not add node section
+                assert "vendor" not in updated_config  # Should not add vendor section
+                assert "command_timeout" not in updated_config.get("node", {})
+                assert "max_parallel_commands" not in updated_config.get("node", {})
+                assert "default_vendor_mappings" not in updated_config.get("vendor", {})
+
+                # Verify only expected sections exist
+                expected_sections = {"remote", "lab"}
+                assert set(updated_config.keys()) == expected_sections
+
+        finally:
+            Path(config_file).unlink(missing_ok=True)
+
+    def test_update_config_setting_method_directly(self):
+        """Test the update_config_setting method works correctly."""
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".yaml", delete=False) as f:
+            original_config = {
+                "lab": {"current_lab": "test_lab"},
+                "remote": {"host": "example.com"},
+            }
+            yaml.dump(original_config, f)
+            config_file = f.name
+
+        try:
+            # Test the update_config_setting method directly
+            settings = Settings(config_file=config_file)
+
+            # Update a setting
+            success = settings.update_config_setting(
+                "lab", "current_lab", "updated_lab"
+            )
+            assert success is True
+
+            # Verify the file was updated correctly
+            with open(config_file, "r") as f:
+                updated_config = yaml.safe_load(f)
+
+            assert updated_config["lab"]["current_lab"] == "updated_lab"
+            assert updated_config["remote"]["host"] == "example.com"  # Unchanged
+
+            # Test updating a new section
+            success = settings.update_config_setting(
+                "topology", "default_prefix", "new_prefix"
+            )
+            assert success is True
+
+            # Verify new section was added
+            with open(config_file, "r") as f:
+                updated_config = yaml.safe_load(f)
+
+            assert updated_config["topology"]["default_prefix"] == "new_prefix"
+            assert updated_config["lab"]["current_lab"] == "updated_lab"  # Still there
+
+        finally:
+            Path(config_file).unlink(missing_ok=True)

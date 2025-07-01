@@ -194,10 +194,15 @@ def show_config():
     click.echo(f"Host: {remote_settings.host or 'Not configured'}")
     click.echo(f"Port: {remote_settings.port}")
     click.echo(f"Username: {remote_settings.username or 'Not configured'}")
-    click.echo(f"Password: {'***' if remote_settings.password else 'Not configured'}")
+    click.echo(f"Password: {'****' if remote_settings.password else 'Not configured'}")
     click.echo(f"Private Key: {remote_settings.private_key_path or 'Not configured'}")
     click.echo(f"Topology Directory: {remote_settings.topology_remote_dir}")
     click.echo(f"Timeout: {remote_settings.timeout}s")
+    click.echo(f"Use Sudo: {remote_settings.use_sudo}")
+    sudo_password_display = (
+        "****" if remote_settings.sudo_password else "Not configured"
+    )
+    click.echo(f"Sudo Password: {sudo_password_display}")
 
     if remote_settings.enabled and remote_settings.has_auth_method():
         click.echo("\n✅ Remote host is properly configured")
