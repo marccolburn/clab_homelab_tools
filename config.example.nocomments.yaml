@@ -1,5 +1,4 @@
 database:
-  url: sqlite:///clab_topology.db
   echo: false
   pool_pre_ping: true
 logging:
