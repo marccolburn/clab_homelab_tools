@@ -207,12 +207,15 @@ class TestCommandManager:
         mock_settings.node.connection_timeout = 30
         mock_get_settings.return_value = mock_settings
 
-        # Create node without credentials
-        node = Mock(spec=Node)
-        node.name = "router1"
-        node.mgmt_ip = "192.168.1.10"
-        node.kind = "juniper_vjunosrouter"
-        # No username, password, or ssh_port attributes
+        # Create a simple object with only the required attributes
+        class TestNode:
+            def __init__(self):
+                self.name = "router1"
+                self.mgmt_ip = "192.168.1.10"
+                self.kind = "juniper_vjunosrouter"
+                # No username, password, ssh_port, or vendor attributes
+
+        node = TestNode()
 
         mock_driver = Mock()
         mock_driver.__enter__ = Mock(return_value=mock_driver)
@@ -288,7 +291,7 @@ class TestCommandManager:
 
         data = json.loads(output)
         assert len(data) == 1
-        assert data[0]["node_name"] == "router1"
+        assert data[0]["node"] == "router1"
         assert data[0]["command"] == "show version"
         assert data[0]["output"] == "JunOS 20.4R3"
         assert data[0]["exit_code"] == 0

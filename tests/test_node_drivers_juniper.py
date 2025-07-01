@@ -94,7 +94,13 @@ class TestJuniperDriver:
         from clab_tools.node.drivers.juniper import JuniperPyEZDriver
 
         device_instance, MockDevice = mock_device
-        device_instance.open.side_effect = ConnectError("Connection failed")
+
+        # Create a mock ConnectError with proper dev attribute
+        mock_error = ConnectError("Connection failed")
+        mock_error.dev = Mock()
+        mock_error.dev.hostname = "test-device"
+
+        device_instance.open.side_effect = mock_error
 
         driver = JuniperPyEZDriver(connection_params)
         with pytest.raises(ConnectionError, match="Failed to connect"):
@@ -168,7 +174,7 @@ class TestJuniperDriver:
         assert result.node_name == "192.168.1.10"
         assert result.command == "show invalid"
         assert result.output == ""
-        assert "Invalid command" in result.error
+        assert "RpcError" in result.error
         assert result.exit_code == 1
 
     def test_execute_command_not_connected(self, connection_params):

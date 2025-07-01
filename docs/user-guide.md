@@ -518,34 +518,98 @@ sudo ./clab-tools.sh bridge create br-mgmt --interfaces eth0
 
 ## Configuration Management
 
+### Viewing Current Configuration
+
+clab-tools provides commands to inspect your current configuration and understand how settings are being applied:
+
+```bash
+# Show all current settings and their sources
+clab-tools config show
+
+# Check specific configuration section
+clab-tools config show --section remote
+
+# Export configuration for documentation
+clab-tools config show --format yaml > current-config.yaml
+
+# List all CLAB environment variables
+clab-tools config env
+```
+
+### Configuration Sources
+
+Settings are loaded in priority order:
+1. Environment variables (highest priority)
+2. Configuration file
+3. Default values (lowest priority)
+
+The `config show` command displays the source of each setting:
+- `[env]` - From environment variable
+- `[file]` - From configuration file
+- `[default]` - Default value
+
 ### Project Settings
 
 Key configuration options in `config.yaml`:
 
 ```yaml
-project:
-  name: "my-homelab"
+database:
+  url: "sqlite:///clab_topology.db"
 
-defaults:
-  node_image: "vrnetlab/vr-vjunosrouter:23.2R1.15"
-  mgmt_network: "clab-mgmt"
+lab:
+  current_lab: "production"
 
-bridges:
-  - name: "br-mgmt"
-    interfaces: ["eth0"]
+remote:
+  enabled: true
+  host: "192.168.1.100"
+  username: "clab"
+
+node:
+  default_username: "admin"
+  ssh_port: 22
+  command_timeout: 30
 ```
 
 ### Environment Variables
 
+Override any setting using environment variables:
+
 ```bash
-# Override project name
-export CLAB_PROJECT_NAME="test-lab"
+# Remote host configuration
+export CLAB_REMOTE_ENABLED=true
+export CLAB_REMOTE_HOST="192.168.1.100"
+export CLAB_REMOTE_USERNAME="admin"
 
-# Enable debug logging
+# Database configuration
+export CLAB_DATABASE_URL="sqlite:///custom.db"
+
+# Lab selection
+export CLAB_LAB_CURRENT_LAB="staging"
+
+# Logging configuration
+export CLAB_LOG_ENABLED=false
 export CLAB_LOG_LEVEL="DEBUG"
+export CLAB_LOG_FORMAT="console"
 
-# Use custom config file
-export CLAB_CONFIG_FILE="./test-config.yaml"
+# Node defaults
+export CLAB_NODE_DEFAULT_USERNAME="admin"
+export CLAB_NODE_SSH_PORT=22
+```
+
+### Checking Configuration
+
+```bash
+# Verify remote is configured
+clab-tools config show --section remote
+
+# Check current lab setting
+clab-tools config show --section lab
+
+# Confirm database location
+clab-tools config show --section database
+
+# See all environment overrides
+clab-tools config env
 ```
 
 ## Troubleshooting

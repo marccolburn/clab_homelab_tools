@@ -710,6 +710,86 @@ clab-tools --enable-remote remote execute "sudo clab destroy -t /tmp/clab-topolo
 clab-tools --enable-remote remote upload-topology my-lab.yml
 ```
 
+## Configuration Management
+
+### `clab-tools config`
+
+View and manage clab-tools configuration settings.
+
+#### `config show`
+
+Display current configuration settings and their sources (environment, file, or default).
+
+```bash
+clab-tools config show
+```
+
+**Options:**
+- `-f, --format [tree|json|yaml]` - Output format (default: tree)
+- `-s, --show-source / --no-show-source` - Show configuration source (default: true)
+- `--section TEXT` - Show only a specific section
+
+**Examples:**
+```bash
+# Show all settings with sources
+clab-tools config show
+
+# Show only remote configuration
+clab-tools config show --section remote
+
+# Export configuration as JSON
+clab-tools config show --format json > config.json
+
+# Show settings without source information
+clab-tools config show --no-show-source
+
+# Check database settings
+clab-tools config show --section database
+
+# Export as YAML for documentation
+clab-tools config show --format yaml
+```
+
+**Output Format:**
+- `[env]` - Value from environment variable
+- `[file]` - Value from configuration file
+- `[default]` - Default value
+
+**Sections:**
+- `database` - Database connection settings
+- `logging` - Logging configuration
+- `topology` - Topology generation defaults
+- `lab` - Lab management settings
+- `bridges` - Bridge management configuration
+- `remote` - Remote host settings
+- `node` - Node connection defaults
+- `vendor` - Vendor-specific settings
+
+#### `config env`
+
+List all CLAB environment variables currently set.
+
+```bash
+clab-tools config env
+```
+
+**Examples:**
+```bash
+# Show all CLAB environment variables
+clab-tools config env
+
+# Common environment variables:
+# CLAB_REMOTE_ENABLED=true
+# CLAB_REMOTE_HOST=192.168.1.100
+# CLAB_REMOTE_USERNAME=admin
+# CLAB_DATABASE_URL=sqlite:///custom.db
+# CLAB_LAB_CURRENT_LAB=production
+# CLAB_LOG_ENABLED=false
+# CLAB_LOG_LEVEL=DEBUG
+```
+
+**Note:** Sensitive values (passwords, keys) are masked with `****` in the output.
+
 ## Configuration Override Examples
 
 ### Lab-Specific Operations
