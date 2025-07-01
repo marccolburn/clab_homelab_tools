@@ -2,9 +2,121 @@
 
 import pytest
 
-from clab_tools.node.drivers.base import ConnectionParams
+from clab_tools.node.drivers.base import (
+    BaseNodeDriver,
+    CommandResult,
+    ConfigFormat,
+    ConfigLoadMethod,
+    ConfigResult,
+    ConnectionParams,
+)
 from clab_tools.node.drivers.registry import DriverRegistry, register_driver
-from tests.test_node_drivers_base import ConcreteNodeDriver
+
+
+class ConcreteNodeDriver(BaseNodeDriver):
+    """Concrete implementation for testing abstract base class."""
+
+    def connect(self):
+        """Mock connect implementation."""
+        self._connected = True
+
+    def disconnect(self):
+        """Mock disconnect implementation."""
+        self._connected = False
+
+    def is_connected(self) -> bool:
+        """Mock is_connected implementation."""
+        return self._connected
+
+    def execute_command(self, command: str, timeout=None):
+        """Mock execute_command implementation."""
+        return CommandResult(
+            node_name=self.connection_params.host,
+            command=command,
+            output="Mock output",
+            error=None,
+            exit_code=0,
+            duration=1.0,
+        )
+
+    def execute_commands(self, commands, timeout=None):
+        """Mock execute_commands implementation."""
+        return [self.execute_command(cmd, timeout) for cmd in commands]
+
+    def load_config(
+        self,
+        config_content,
+        format=ConfigFormat.TEXT,
+        method=ConfigLoadMethod.MERGE,
+        commit_comment=None,
+    ):
+        """Mock load_config implementation."""
+        return ConfigResult(
+            node_name=self.connection_params.host,
+            success=True,
+            message="Mock config loaded",
+            diff="+ mock diff",
+            error=None,
+        )
+
+    def load_config_from_file(
+        self, device_file_path, method=ConfigLoadMethod.MERGE, commit_comment=None
+    ):
+        """Mock load_config_from_file implementation."""
+        return ConfigResult(
+            node_name=self.connection_params.host,
+            success=True,
+            message="Mock config loaded from file",
+            diff="+ mock diff",
+            error=None,
+        )
+
+    def validate_config(self, config_content, format=ConfigFormat.TEXT):
+        """Mock validate_config implementation."""
+        return (True, None)
+
+    def get_config_diff(self):
+        """Mock get_config_diff implementation."""
+        return "+ mock diff"
+
+    def commit_config(self, comment=None, confirmed=False, timeout=0):
+        """Mock commit_config implementation."""
+        return ConfigResult(
+            node_name=self.connection_params.host,
+            success=True,
+            message="Mock commit success",
+            diff=None,
+            error=None,
+        )
+
+    def rollback_config(self, rollback_id=None):
+        """Mock rollback_config implementation."""
+        return ConfigResult(
+            node_name=self.connection_params.host,
+            success=True,
+            message="Mock rollback success",
+            diff=None,
+            error=None,
+        )
+
+    @classmethod
+    def get_supported_vendors(cls):
+        """Get list of supported vendor names."""
+        return ["mock"]
+
+    @classmethod
+    def get_supported_device_types(cls):
+        """Get list of supported device types."""
+        return ["mock_device"]
+
+    def get_facts(self):
+        """Get device facts/information."""
+        return {
+            "hostname": self.connection_params.host,
+            "vendor": "mock",
+            "model": "mock_device",
+            "version": "1.0.0",
+        }
 
 
 class TestDriverRegistry:
