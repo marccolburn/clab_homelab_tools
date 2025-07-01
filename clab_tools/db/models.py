@@ -69,6 +69,25 @@ class Node(Base):
     name: Mapped[str] = Column(String(255), nullable=False, index=True)
     kind: Mapped[str] = Column(String(100), nullable=False)
     mgmt_ip: Mapped[str] = Column(String(45), nullable=False)  # IPv4/IPv6 address
+
+    # New fields for node management
+    vendor: Mapped[Optional[str]] = Column(String(100), nullable=True)
+    model: Mapped[Optional[str]] = Column(String(100), nullable=True)
+    os_version: Mapped[Optional[str]] = Column(String(100), nullable=True)
+    username: Mapped[Optional[str]] = Column(String(100), nullable=True)
+    password: Mapped[Optional[str]] = Column(String(255), nullable=True)
+    ssh_port: Mapped[Optional[int]] = Column(Integer, nullable=True, default=22)
+
+    # Configuration management fields
+    last_config_load: Mapped[Optional[datetime]] = Column(
+        DateTime(timezone=True), nullable=True
+    )
+    last_config_method: Mapped[Optional[str]] = Column(String(50), nullable=True)
+    last_config_status: Mapped[Optional[str]] = Column(String(50), nullable=True)
+    last_command_exec: Mapped[Optional[datetime]] = Column(
+        DateTime(timezone=True), nullable=True
+    )
+
     created_at: Mapped[datetime] = Column(
         DateTime(timezone=True), server_default=func.now()
     )
@@ -118,6 +137,19 @@ class Node(Base):
             "name": self.name,
             "kind": self.kind,
             "mgmt_ip": self.mgmt_ip,
+            "vendor": self.vendor,
+            "model": self.model,
+            "os_version": self.os_version,
+            "username": self.username,
+            "ssh_port": self.ssh_port,
+            "last_config_load": (
+                self.last_config_load.isoformat() if self.last_config_load else None
+            ),
+            "last_config_method": self.last_config_method,
+            "last_config_status": self.last_config_status,
+            "last_command_exec": (
+                self.last_command_exec.isoformat() if self.last_command_exec else None
+            ),
             "created_at": self.created_at.isoformat() if self.created_at else None,
         }
 

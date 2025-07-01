@@ -172,9 +172,37 @@ sudo clab-tools bridge configure
 
 **Note**: The `bridge configure` command sets up VLAN forwarding on the bridge interfaces, which is essential for proper communication between nodes. Without this step, VLANs won't be forwarded correctly between your containerlab nodes.
 
-### 5. Upload Configuration to Nodes
+### 5. Interact with Running Nodes
 
-After your topology is running, you can upload configurations to nodes:
+After your topology is running, you can interact with nodes in multiple ways:
+
+#### Execute Commands
+
+```bash
+# Check version on a specific node
+clab-tools node exec -c "show version" --node r1
+
+# Check interfaces on all routers
+clab-tools node exec -c "show interfaces terse" --kind juniper_vjunosrouter
+
+# Get routing table from all nodes in parallel
+clab-tools node exec -c "show route" --all --parallel --output-format table
+```
+
+#### Load Configurations
+
+```bash
+# Load config to a specific node
+clab-tools node config -f router-config.conf --node r1
+
+# First validate with dry-run
+clab-tools node config -f baseline.conf --node r1 --dry-run
+
+# Apply baseline to all routers
+clab-tools node config -f baseline.conf --kind juniper_vjunosrouter --comment "Initial setup"
+```
+
+#### Upload Files
 
 ```bash
 # Upload initial config to a specific node

@@ -20,6 +20,7 @@ from clab_tools.commands.bridge_commands import (
     create_bridges,
     list_bridges,
 )
+from clab_tools.commands.config_commands import config_commands
 from clab_tools.commands.data_commands import clear_data, show_data
 from clab_tools.commands.import_csv import import_csv
 from clab_tools.commands.lab_commands import lab_commands
@@ -209,6 +210,7 @@ cli.add_command(remote)
 cli.add_command(data)
 cli.add_command(topology)
 cli.add_command(bridge)
+cli.add_command(config_commands, name="config")
 
 
 if __name__ == "__main__":

@@ -495,6 +495,169 @@ After uploading, the command displays:
 - Failed uploads
 - Individual node results (unless in quiet mode)
 
+#### `node exec`
+
+Execute operational commands on network devices through vendor-specific drivers.
+
+```bash
+clab-tools node exec [OPTIONS]
+```
+
+**Options:**
+- `-c, --command TEXT` - Command to execute (required)
+- `--node TEXT` - Execute on specific node
+- `--kind TEXT` - Execute on all nodes of specific kind
+- `--nodes TEXT` - Execute on comma-separated list of nodes
+- `--all` - Execute on all nodes in current lab (skips bridge nodes)
+- `--parallel` - Execute commands in parallel
+- `--max-workers INTEGER` - Maximum parallel workers (default: 5)
+- `--timeout INTEGER` - Command timeout in seconds (default: 30)
+- `--output-format [text|table|json]` - Output format (default: text)
+- `--user TEXT` - SSH username (overrides default)
+- `--password TEXT` - SSH password (overrides default)
+- `--private-key PATH` - SSH private key file (overrides default)
+
+**Target Selection (choose one):**
+- `--node` - Single node by name
+- `--kind` - All nodes of a specific kind/type
+- `--nodes` - Specific list of nodes
+- `--all` - All nodes in the current lab (automatically filters out bridge nodes)
+
+**Output Formats:**
+- `text` - Default format with node name headers and command output
+- `table` - Tabular format for structured command output
+- `json` - JSON format for programmatic processing
+
+**Examples:**
+```bash
+# Execute command on single node
+clab-tools node exec -c "show version" --node router1
+
+# Execute on all Juniper vJunos routers
+clab-tools node exec -c "show ospf neighbor" --kind juniper_vjunosrouter
+
+# Execute on specific nodes with table output
+clab-tools node exec -c "show interfaces terse" --nodes router1,router2 --output-format table
+
+# Execute on all nodes in parallel (skips bridges)
+clab-tools node exec -c "show system uptime" --all --parallel --max-workers 10
+
+# Execute with custom timeout for long-running commands
+clab-tools node exec -c "show configuration" --all --timeout 120
+
+# Export results as JSON for processing
+clab-tools node exec -c "show route summary" --all --output-format json > routes.json
+
+# Use custom credentials
+clab-tools node exec -c "show version" --node router1 --user admin --password secret
+
+# Quiet mode for scripting
+clab-tools --quiet node exec -c "show interfaces" --all --output-format json
+```
+
+**Features:**
+- **Vendor-Agnostic**: Automatically detects and uses appropriate driver based on node vendor
+- **Parallel Execution**: Run commands simultaneously across multiple nodes
+- **Progress Tracking**: Rich progress bars show execution status (unless in quiet mode)
+- **Error Handling**: Gracefully handles connection failures and command errors
+- **Clean Output**: Suppresses verbose logging and warnings for professional output
+
+**Currently Supported Vendors:**
+- Juniper (all variants: vJunos, vMX, vSRX, vQFX, vEX)
+- Additional vendors coming soon (Nokia SR Linux, Arista cEOS, Cisco IOS-XR)
+
+#### `node config`
+
+Load configurations to network devices through vendor-specific drivers.
+
+```bash
+clab-tools node config [OPTIONS]
+```
+
+**Options:**
+- `-f, --file PATH` - Local configuration file to load
+- `-d, --device-file TEXT` - Device file path to load configuration from
+- `--node TEXT` - Load config on specific node
+- `--kind TEXT` - Load config on all nodes of specific kind
+- `--nodes TEXT` - Load config on comma-separated list of nodes
+- `--all` - Load config on all nodes in current lab (skips bridge nodes)
+- `--method [merge|override|replace]` - Configuration load method (default: merge)
+- `--dry-run` - Validate configuration without applying
+- `--diff` - Show configuration diff without applying
+- `--rollback` - Rollback to previous configuration
+- `--comment TEXT` - Commit comment for configuration change
+- `--parallel` - Load configurations in parallel
+- `--max-workers INTEGER` - Maximum parallel workers (default: 5)
+- `--user TEXT` - SSH username (overrides default)
+- `--password TEXT` - SSH password (overrides default)
+- `--private-key PATH` - SSH private key file (overrides default)
+
+**Configuration Sources (choose one):**
+- `-f, --file` - Load configuration from local file
+- `-d, --device-file` - Load configuration from file on device
+- `--rollback` - Rollback to previous configuration (no file needed)
+
+**Load Methods:**
+- `merge` - Merge configuration with existing (default)
+- `override` - Override specific configuration sections
+- `replace` - Replace entire configuration
+
+**Examples:**
+```bash
+# Load configuration from local file
+clab-tools node config -f router.conf --node router1
+
+# Load with dry-run to validate first
+clab-tools node config -f baseline.conf --node router1 --dry-run
+
+# Load configuration on all vMX routers with override method
+clab-tools node config -f vmx-baseline.conf --kind juniper_vmx --method override
+
+# Load from device file
+clab-tools node config -d /tmp/device-config.txt --node router1
+
+# Load on multiple nodes in parallel with comment
+clab-tools node config -f ospf-update.conf --all --parallel --comment "OSPF area update"
+
+# Show configuration diff before applying
+clab-tools node config -f changes.conf --node router1 --diff
+
+# Rollback configuration
+clab-tools node config --rollback --node router1
+
+# Load on specific nodes with merge method
+clab-tools node config -f acl-update.conf --nodes router1,router2,router3 --method merge
+
+# Use custom credentials
+clab-tools node config -f secure.conf --node router1 --user admin --password secret
+
+# Quiet mode for automation
+clab-tools --quiet node config -f baseline.conf --all --parallel
+```
+
+**Features:**
+- **Dual Source Support**: Load configurations from local files or device filesystem
+- **Multiple Load Methods**: Support for merge, override, and replace operations
+- **Dry-Run Validation**: Test configurations before applying them
+- **Configuration Diff**: Preview changes before committing
+- **Rollback Support**: Quickly revert to previous configuration
+- **Parallel Loading**: Apply configurations to multiple nodes simultaneously
+- **Progress Tracking**: Visual feedback during configuration operations
+- **Automatic Format Detection**: Detects configuration format (set, text, XML, JSON)
+
+**Configuration Formats:**
+- **Set Format**: Commands starting with `set` or `delete`
+- **Text Format**: Hierarchical bracketed format
+- **XML Format**: JunOS XML configuration format
+- **JSON Format**: JSON-based configuration format
+
+**Safety Features:**
+- Configuration validation before applying
+- Automatic rollback on errors
+- Configuration locking during operations
+- Detailed error reporting
+- Audit trail with commit comments
+
 ## Remote Operations
 
 ### `clab-tools remote`
@@ -546,6 +709,86 @@ clab-tools --enable-remote remote execute "sudo clab destroy -t /tmp/clab-topolo
 # Upload topology file
 clab-tools --enable-remote remote upload-topology my-lab.yml
 ```
+
+## Configuration Management
+
+### `clab-tools config`
+
+View and manage clab-tools configuration settings.
+
+#### `config show`
+
+Display current configuration settings and their sources (environment, file, or default).
+
+```bash
+clab-tools config show
+```
+
+**Options:**
+- `-f, --format [tree|json|yaml]` - Output format (default: tree)
+- `-s, --show-source / --no-show-source` - Show configuration source (default: true)
+- `--section TEXT` - Show only a specific section
+
+**Examples:**
+```bash
+# Show all settings with sources
+clab-tools config show
+
+# Show only remote configuration
+clab-tools config show --section remote
+
+# Export configuration as JSON
+clab-tools config show --format json > config.json
+
+# Show settings without source information
+clab-tools config show --no-show-source
+
+# Check database settings
+clab-tools config show --section database
+
+# Export as YAML for documentation
+clab-tools config show --format yaml
+```
+
+**Output Format:**
+- `[env]` - Value from environment variable
+- `[file]` - Value from configuration file
+- `[default]` - Default value
+
+**Sections:**
+- `database` - Database connection settings
+- `logging` - Logging configuration
+- `topology` - Topology generation defaults
+- `lab` - Lab management settings
+- `bridges` - Bridge management configuration
+- `remote` - Remote host settings
+- `node` - Node connection defaults
+- `vendor` - Vendor-specific settings
+
+#### `config env`
+
+List all CLAB environment variables currently set.
+
+```bash
+clab-tools config env
+```
+
+**Examples:**
+```bash
+# Show all CLAB environment variables
+clab-tools config env
+
+# Common environment variables:
+# CLAB_REMOTE_ENABLED=true
+# CLAB_REMOTE_HOST=192.168.1.100
+# CLAB_REMOTE_USERNAME=admin
+# CLAB_DATABASE_URL=sqlite:///custom.db
+# CLAB_LAB_CURRENT_LAB=production
+# CLAB_LOG_ENABLED=false
+# CLAB_LOG_LEVEL=DEBUG
+```
+
+**Note:** Sensitive values (passwords, keys) are masked with `****` in the output.
 
 ## Configuration Override Examples
 

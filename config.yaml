@@ -31,7 +31,7 @@ remote:
   use_sudo: true
   sudo_password: null
 lab:
-  current_lab: default
+  current_lab: jncie_sp_ssb
   use_global_database: false
   global_database_path: null
   auto_create_lab: true
@@ -41,4 +41,23 @@ node:
   ssh_port: 22
   connection_timeout: 30
   private_key_path: null
+  command_timeout: 30
+  max_parallel_commands: 10
+  config_timeout: 60
+  max_parallel_configs: 5
+  default_commit_comment: clab-tools configuration
+  auto_rollback_on_error: true
+vendor:
+  default_vendor_mappings:
+    juniper_vjunosrouter: juniper
+    juniper_vjunosswitch: juniper
+    juniper_vjunosevolved: juniper
+    juniper_vmx: juniper
+    juniper_vsrx: juniper
+    juniper_vqfx: juniper
+    nokia_srlinux: nokia
+    arista_ceos: arista
+    cisco_iosxr: cisco
+  juniper_gather_facts: false
+  juniper_auto_probe: true
 debug: false

@@ -152,6 +152,112 @@ clab-tools node upload --all --source banner.txt --dest /etc/banner
 clab-tools node upload --node server1 --source-dir ./configs --dest /etc/app/
 ```
 
+### Executing Commands on Nodes
+
+Execute operational commands on network devices using vendor-specific drivers:
+
+```bash
+# Check version on a single node
+clab-tools node exec -c "show version" --node router1
+
+# Check OSPF neighbors on all Juniper routers
+clab-tools node exec -c "show ospf neighbor" --kind juniper_vjunosrouter
+
+# Get interface status from multiple nodes in parallel
+clab-tools node exec -c "show interfaces terse" --nodes router1,router2,router3 --parallel
+
+# Collect routing tables from all nodes in JSON format
+clab-tools node exec -c "show route" --all --output-format json > routes.json
+
+# Use table format for structured output
+clab-tools node exec -c "show bgp summary" --all --output-format table
+```
+
+#### Common Use Cases
+
+**Health Checks:**
+```bash
+# Check system uptime across all nodes
+clab-tools node exec -c "show system uptime" --all --parallel
+
+# Verify interface status
+clab-tools node exec -c "show interfaces terse | match up" --kind juniper
+```
+
+**Troubleshooting:**
+```bash
+# Check specific protocol status
+clab-tools node exec -c "show ospf neighbor detail" --node router1
+
+# Collect logs with extended timeout
+clab-tools node exec -c "show log messages | last 100" --all --timeout 60
+```
+
+**Automation:**
+```bash
+# Export BGP routes for analysis
+clab-tools --quiet node exec -c "show route protocol bgp" --all \
+  --output-format json > bgp_routes.json
+
+# Monitor interface errors
+clab-tools node exec -c "show interfaces extensive | match error" \
+  --kind juniper_vmx --output-format table
+```
+
+### Loading Configurations to Nodes
+
+Apply configurations to network devices with validation and rollback support:
+
+```bash
+# Load configuration from local file
+clab-tools node config -f router.conf --node router1
+
+# Validate configuration before applying (dry-run)
+clab-tools node config -f changes.conf --node router1 --dry-run
+
+# Load configuration on all vMX routers
+clab-tools node config -f vmx-baseline.conf --kind juniper_vmx
+
+# Apply configuration in parallel to all nodes
+clab-tools node config -f baseline.conf --all --parallel --comment "Initial baseline"
+```
+
+#### Configuration Management Workflows
+
+**Safe Configuration Changes:**
+```bash
+# 1. Preview the configuration diff
+clab-tools node config -f ospf-update.conf --node router1 --diff
+
+# 2. Validate with dry-run
+clab-tools node config -f ospf-update.conf --node router1 --dry-run
+
+# 3. Apply the configuration
+clab-tools node config -f ospf-update.conf --node router1 --comment "OSPF area update"
+
+# 4. If issues arise, rollback
+clab-tools node config --rollback --node router1
+```
+
+**Bulk Configuration Updates:**
+```bash
+# Update ACLs on all edge routers
+clab-tools node config -f edge-acl.conf --nodes edge1,edge2,edge3 \
+  --method merge --comment "Security ACL update"
+
+# Replace entire configuration (use with caution)
+clab-tools node config -f full-config.xml --node router1 --method replace
+```
+
+**Device File Loading:**
+```bash
+# Load configuration stored on device
+clab-tools node config -d /tmp/rescue.conf --node router1
+
+# Useful for configurations generated on the device
+clab-tools node config -d /var/tmp/generated.conf --all --dry-run
+```
+
 ### Node Authentication
 
 Configure default node credentials in your config file:
@@ -159,10 +265,13 @@ Configure default node credentials in your config file:
 ```yaml
 # config.local.yaml
 node:
-  default_username: admin
+  default_user: admin
   default_password: admin123  # Warning: Use SSH keys instead
+  default_ssh_port: 22
   private_key_path: ~/.ssh/lab_key
-  ssh_port: 22
+  command_timeout: 30
+  config_timeout: 60
+  max_parallel_workers: 5
 ```
 
 Or override per command:
@@ -175,7 +284,32 @@ clab-tools node upload --node switch1 --source config.txt --dest /tmp/config.txt
 # Use specific SSH key
 clab-tools node upload --all --source init.sh --dest /tmp/init.sh \
   --private-key ~/.ssh/special_key
+
+# Override for exec command
+clab-tools node exec -c "show version" --node router1 \
+  --user admin --password newsecret
+
+# Override for config command
+clab-tools node config -f secure.conf --node router1 \
+  --user admin --private-key ~/.ssh/admin_key
 ```
+
+### Vendor Support
+
+The node exec and config commands use vendor-specific drivers to communicate with network devices:
+
+**Currently Supported:**
+- **Juniper**: All JunOS-based devices (vJunos, vMX, vSRX, vQFX, vEX)
+  - Uses PyEZ library for native JunOS communication
+  - Supports all configuration formats (set, text, XML, JSON)
+  - Full rollback and commit capabilities
+
+**Coming Soon:**
+- Nokia SR Linux
+- Arista cEOS
+- Cisco IOS-XR
+
+The system automatically detects the vendor based on the node's kind and selects the appropriate driver.
 
 ## Topology Lifecycle Management
 
@@ -384,34 +518,98 @@ sudo ./clab-tools.sh bridge create br-mgmt --interfaces eth0
 
 ## Configuration Management
 
+### Viewing Current Configuration
+
+clab-tools provides commands to inspect your current configuration and understand how settings are being applied:
+
+```bash
+# Show all current settings and their sources
+clab-tools config show
+
+# Check specific configuration section
+clab-tools config show --section remote
+
+# Export configuration for documentation
+clab-tools config show --format yaml > current-config.yaml
+
+# List all CLAB environment variables
+clab-tools config env
+```
+
+### Configuration Sources
+
+Settings are loaded in priority order:
+1. Environment variables (highest priority)
+2. Configuration file
+3. Default values (lowest priority)
+
+The `config show` command displays the source of each setting:
+- `[env]` - From environment variable
+- `[file]` - From configuration file
+- `[default]` - Default value
+
 ### Project Settings
 
 Key configuration options in `config.yaml`:
 
 ```yaml
-project:
-  name: "my-homelab"
+database:
+  url: "sqlite:///clab_topology.db"
 
-defaults:
-  node_image: "vrnetlab/vr-vjunosrouter:23.2R1.15"
-  mgmt_network: "clab-mgmt"
+lab:
+  current_lab: "production"
 
-bridges:
-  - name: "br-mgmt"
-    interfaces: ["eth0"]
+remote:
+  enabled: true
+  host: "192.168.1.100"
+  username: "clab"
+
+node:
+  default_username: "admin"
+  ssh_port: 22
+  command_timeout: 30
 ```
 
 ### Environment Variables
 
+Override any setting using environment variables:
+
 ```bash
-# Override project name
-export CLAB_PROJECT_NAME="test-lab"
+# Remote host configuration
+export CLAB_REMOTE_ENABLED=true
+export CLAB_REMOTE_HOST="192.168.1.100"
+export CLAB_REMOTE_USERNAME="admin"
 
-# Enable debug logging
+# Database configuration
+export CLAB_DATABASE_URL="sqlite:///custom.db"
+
+# Lab selection
+export CLAB_LAB_CURRENT_LAB="staging"
+
+# Logging configuration
+export CLAB_LOG_ENABLED=false
 export CLAB_LOG_LEVEL="DEBUG"
+export CLAB_LOG_FORMAT="console"
 
-# Use custom config file
-export CLAB_CONFIG_FILE="./test-config.yaml"
+# Node defaults
+export CLAB_NODE_DEFAULT_USERNAME="admin"
+export CLAB_NODE_SSH_PORT=22
+```
+
+### Checking Configuration
+
+```bash
+# Verify remote is configured
+clab-tools config show --section remote
+
+# Check current lab setting
+clab-tools config show --section lab
+
+# Confirm database location
+clab-tools config show --section database
+
+# See all environment overrides
+clab-tools config env
 ```
 
 ## Troubleshooting
