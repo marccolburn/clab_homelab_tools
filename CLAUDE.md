@@ -2,7 +2,36 @@
 
 This document provides a comprehensive guide to the clab-tools codebase for AI assistants working on this project.
 
-## CURRENT STATUS (v1.1.1 - Released 2025-06-29)
+## CURRENT STATUS (v1.1.3 - Released 2025-07-01)
+
+### ✅ LATEST FIXES (v1.1.3 - Critical Security & Environment Variable Fixes):
+
+1. **Environment Variable Priority Fix** ✅ **COMPLETE**
+   - ✅ Fixed issue where config file values were overriding environment variables
+   - ✅ Environment variables now properly take precedence over config file settings
+   - ✅ Specifically fixes `CLAB_REMOTE_SUDO_PASSWORD` and other sensitive env vars
+   - ✅ Enhanced `Settings._load_from_file()` to preserve environment variable values
+   - ✅ Added comprehensive test suite for environment variable priority
+
+2. **Lab Switch Security Fix** ✅ **COMPLETE**
+   - ✅ Fixed security issue where `lab switch` exposed sensitive environment variables to config file
+   - ✅ Added `update_config_setting()` method for targeted config updates
+   - ✅ Lab switch now only updates `current_lab` setting without dumping all defaults
+   - ✅ Prevents exposure of passwords and sensitive data to config files
+   - ✅ Maintains config file cleanliness (no unwanted defaults added)
+
+3. **Configuration Management Commands** ✅ **COMPLETE**
+   - ✅ Added `config show` command to display settings with sources (env/file/default)
+   - ✅ Added `config env` command to list CLAB environment variables
+   - ✅ Support for multiple output formats (tree, json, yaml)
+   - ✅ Sensitive value masking in output
+   - ✅ Configuration source tracking and display
+
+**Key Security Improvements:**
+- Environment variables properly override config file values
+- Lab operations don't expose sensitive data to config files
+- Targeted config updates prevent configuration drift
+- Comprehensive test coverage for security scenarios
 
 ### ✅ COMPLETED FEATURES (feature/node-exec-config-commands branch - Production Ready):
 **Node Management Commands with Vendor-Agnostic Drivers**

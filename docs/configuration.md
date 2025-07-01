@@ -53,7 +53,7 @@ The main configuration file defines project-wide settings:
 project:
   name: "my-homelab"
   description: "My containerlab homelab setup"
-  version: "1.1.1"
+  version: "1.1.3"
 
 # Default Node Settings
 defaults:
@@ -97,7 +97,7 @@ bridges:
 |---------|-------------|---------|---------|
 | `project.name` | Project identifier | `"homelab"` | `"datacenter-sim"` |
 | `project.description` | Project description | `""` | `"Network simulation"` |
-| `project.version` | Project version | `"1.1.1"` | `"2.1.0"` |
+| `project.version` | Project version | `"1.1.3"` | `"2.1.0"` |
 
 ### Database Settings
 

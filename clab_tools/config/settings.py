@@ -300,12 +300,33 @@ class Settings(BaseSettings):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
 
+        # Store which fields were set from environment before loading config
+        self._store_env_fields()
+
         # Auto-detect config file if not explicitly provided
         if not self.config_file:
             self.config_file = find_config_file()
 
         if self.config_file and Path(self.config_file).exists():
             self._load_from_file(self.config_file)
+
+    def _store_env_fields(self):
+        """Store which fields were set from environment variables."""
+        self._env_fields = {}
+        # Store env-set fields for each subsetting
+        for field_name in [
+            "database",
+            "logging",
+            "topology",
+            "bridges",
+            "remote",
+            "lab",
+            "node",
+            "vendor",
+        ]:
+            subsetting = getattr(self, field_name)
+            if hasattr(subsetting, "model_fields_set"):
+                self._env_fields[field_name] = subsetting.model_fields_set.copy()
 
     def _load_from_file(self, config_path: str):
         """Load configuration from YAML file."""
@@ -320,11 +341,20 @@ class Settings(BaseSettings):
                         # Handle nested settings
                         current_value = getattr(self, key)
                         if hasattr(current_value, "__dict__"):
+                            # Get fields set from environment for this subsection
+                            env_set_fields = self._env_fields.get(key, set())
+
                             for sub_key, sub_value in value.items():
+                                # Skip if this field was set by environment variable
+                                if sub_key in env_set_fields:
+                                    continue
+
                                 if hasattr(current_value, sub_key):
                                     setattr(current_value, sub_key, sub_value)
                     else:
-                        setattr(self, key, value)
+                        # For top-level fields, check if they were set by env
+                        if key not in self.model_fields_set:
+                            setattr(self, key, value)
         except Exception as e:
             # Don't fail startup on config file errors, just log
             print(f"Warning: Could not load config file {config_path}: {e}")
@@ -370,6 +400,48 @@ class Settings(BaseSettings):
             return True
         except Exception as e:
             print(f"Warning: Could not save config file {config_path}: {e}")
+            return False
+
+    def update_config_setting(
+        self, section: str, key: str, value: Any, config_path: Optional[str] = None
+    ) -> bool:
+        """Update a specific setting without affecting other settings.
+
+        This method only updates the specified setting in the existing config file,
+        preserving other settings and not adding environment-only values.
+
+        Args:
+            section: The section name (e.g., 'lab', 'remote')
+            key: The setting key (e.g., 'current_lab')
+            value: The new value
+            config_path: Optional path to config file
+        """
+        if config_path is None:
+            if self.config_file:
+                config_path = self.config_file
+            else:
+                # Create config.local.yaml as default
+                config_path = "config.local.yaml"
+
+        try:
+            # Load existing config file
+            config_data = {}
+            if Path(config_path).exists():
+                with open(config_path, "r") as f:
+                    config_data = yaml.safe_load(f) or {}
+
+            # Update only the specific setting
+            if section not in config_data:
+                config_data[section] = {}
+            config_data[section][key] = value
+
+            # Save back to file
+            with open(config_path, "w") as f:
+                yaml.dump(config_data, f, default_flow_style=False, sort_keys=False)
+
+            return True
+        except Exception as e:
+            print(f"Warning: Could not update config file {config_path}: {e}")
             return False
 
 
