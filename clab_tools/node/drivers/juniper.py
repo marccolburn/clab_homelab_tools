@@ -312,7 +312,7 @@ class JuniperPyEZDriver(BaseNodeDriver):
         """Load configuration from device file.
 
         Args:
-            device_file_path: Path on device
+            device_file_path: Path on device (file on the remote Junos device)
             method: Load method
             commit_comment: Commit comment
 
@@ -326,13 +326,16 @@ class JuniperPyEZDriver(BaseNodeDriver):
             # Lock configuration
             self.config.lock()
 
-            # Load from device file
+            # Load from device file using url= parameter
+            # PyEZ's path= parameter expects a local file, but url= can reference
+            # files on the device using the format: /path/to/file (without file:// prefix)
+            # PyEZ will interpret paths starting with / as device-local files
             if method == ConfigLoadMethod.MERGE:
-                self.config.load(path=device_file_path, merge=True)
+                self.config.load(url=device_file_path, merge=True)
             elif method == ConfigLoadMethod.OVERRIDE:
-                self.config.load(path=device_file_path, overwrite=True)
+                self.config.load(url=device_file_path, overwrite=True)
             elif method == ConfigLoadMethod.REPLACE:
-                self.config.load(path=device_file_path, replace=True)
+                self.config.load(url=device_file_path, replace=True)
 
             # Get diff
             diff = self.config.diff()
