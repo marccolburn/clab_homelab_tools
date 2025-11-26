@@ -18,11 +18,11 @@ clab-tools provides a workflow for managing complex containerlab topologies thro
 
 ```bash
 # Start new project
-./clab-tools.sh lab create my-lab
-./clab-tools.sh lab switch my-lab
+clab-tools lab create my-lab
+clab-tools lab switch my-lab
 
 # Import topology data
-clab-tools data import nodes.csv connections.csv
+clab-tools data import -n nodes.csv -c connections.csv
 
 # Verify data
 clab-tools data show
@@ -32,26 +32,26 @@ clab-tools data show
 
 ```bash
 # Create management bridge
-sudo ./clab-tools.sh bridge create br-mgmt --interfaces eth0
+sudo clab-tools bridge create-bridge br-mgmt --interface eth0
 
 # List bridges
-./clab-tools.sh bridge list
+clab-tools bridge list
 
 # Configure bridge settings
-./clab-tools.sh bridge configure br-mgmt --stp off
+sudo clab-tools bridge configure
 ```
 
 ### 3. Generate and Deploy Topology
 
 ```bash
 # Generate containerlab topology
-./clab-tools.sh topology generate
+clab-tools topology generate -o lab.yml
 
 # Deploy locally
-containerlab deploy -t clab-topology.yaml
+clab-tools topology start lab.yml
 
-# Or deploy to remote host
-./clab-tools.sh remote deploy lab-server-1
+# Or deploy to remote host (with remote configured)
+clab-tools --enable-remote topology start lab.yml --remote
 ```
 
 ## Quick Start with Bootstrap
@@ -349,16 +349,16 @@ clab-tools topology start lab.yml --remote
 
 ```bash
 # Create and manage labs
-./clab-tools.sh lab create datacenter-sim
-./clab-tools.sh lab create campus-network
-./clab-tools.sh lab list
+clab-tools lab create datacenter-sim
+clab-tools lab create campus-network
+clab-tools lab list
 
 # Switch between labs
-./clab-tools.sh lab switch datacenter-sim
+clab-tools lab switch datacenter-sim
 clab-tools data show
 
 # Clone existing lab
-./clab-tools.sh lab clone datacenter-sim datacenter-v2
+clab-tools lab clone datacenter-sim datacenter-v2
 ```
 
 ### Data Isolation
@@ -461,16 +461,13 @@ remote_hosts:
 
 ```bash
 # Test connectivity
-./clab-tools.sh remote test-connection lab-server-1
+clab-tools remote test-connection
 
-# Deploy topology
-./clab-tools.sh remote deploy lab-server-1
-
-# Check remote status
-./clab-tools.sh remote status lab-server-1
+# Upload topology to remote
+clab-tools remote upload lab.yml
 
 # Execute remote commands
-./clab-tools.sh remote exec lab-server-1 "containerlab inspect"
+clab-tools remote execute "sudo clab inspect"
 ```
 
 ## Advanced Usage
@@ -479,13 +476,13 @@ remote_hosts:
 
 ```bash
 # Generate with custom template
-./clab-tools.sh topology generate --template custom-template.j2
+clab-tools topology generate --template custom-template.j2
 
 # Include specific nodes only
-./clab-tools.sh topology generate --nodes spine1,spine2
+clab-tools topology generate --nodes spine1,spine2
 
 # Output to specific file
-./clab-tools.sh topology generate --output my-topology.yaml
+clab-tools topology generate --output my-topology.yaml
 ```
 
 ### Bulk Operations
@@ -495,25 +492,27 @@ remote_hosts:
 clab-tools data clear
 
 # Re-import updated data
-./clab-tools.sh data clear
-./clab-tools.sh data import -n nodes-updated.csv -c connections.csv
+clab-tools data clear
+clab-tools data import -n nodes-updated.csv -c connections.csv
 
 # Manual bridge creation with custom options
-sudo ./clab-tools.sh bridge create-bridge br-custom --interface eth0
+sudo clab-tools bridge create-bridge br-custom --interface eth0
 ```
 
 ### Scripting and Automation
 
 ```bash
-# Use in scripts
 #!/bin/bash
 set -e
 
-./clab-tools.sh lab create prod-network
-clab-tools data import prod-nodes.csv prod-connections.csv
-sudo ./clab-tools.sh bridge create br-mgmt --interfaces eth0
-./clab-tools.sh topology generate
-./clab-tools.sh remote deploy prod-server
+# Set quiet mode for non-interactive use
+export CLAB_QUIET=true
+
+clab-tools lab create prod-network
+clab-tools data import -n prod-nodes.csv -c prod-connections.csv
+sudo clab-tools bridge create-bridge br-mgmt --interface eth0
+clab-tools topology generate -o prod.yml
+clab-tools topology start prod.yml
 ```
 
 ## Configuration Management
@@ -631,7 +630,7 @@ head -1 nodes.csv
 ip link show type bridge
 
 # Run with sudo
-sudo ./clab-tools.sh bridge create br-test
+sudo clab-tools bridge create-bridge br-test
 ```
 
 **Remote Connection Issues:**
@@ -647,10 +646,10 @@ chmod 600 ~/.ssh/id_rsa
 
 ```bash
 # Enable debug output
-./clab-tools.sh --debug --verbose command
+clab-tools --debug <command>
 
 # Log to file
-./clab-tools.sh --debug command 2>&1 | tee debug.log
+clab-tools --debug <command> 2>&1 | tee debug.log
 ```
 
 ## Best Practices

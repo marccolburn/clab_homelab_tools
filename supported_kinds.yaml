@@ -1,4 +1,4 @@
 # Supported Containerlab Device Kinds Configuration
 # Format: kind_name: container_image
 
-juniper_vjunosrouter: "vrnetlab/vr-vjunosrouter:23.2R1.15"
+juniper_vjunosrouter: "vrnetlab/juniper_vjunos-router:25.2R1.9"

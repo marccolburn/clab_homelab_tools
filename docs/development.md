@@ -27,10 +27,11 @@ pre-commit install
 python3 -m venv .venv
 source .venv/bin/activate
 
-# Install dependencies
-pip install -r requirements.txt
-pip install -r requirements-dev.txt
-pip install -e .
+# Upgrade pip (required for editable installs with pyproject.toml)
+pip install --upgrade pip
+
+# Install package with all dependencies (editable mode)
+pip install -e ".[dev]"
 ```
 
 ### 2. Code Changes
@@ -255,7 +256,7 @@ rm clab_topology.db
 clab-tools data show  # Will recreate database automatically
 
 # Permission errors (bridges)
-sudo ./clab-tools.sh bridge create br-test
+sudo clab-tools bridge create-bridge br-test
 ```
 
 ### Logging
@@ -264,10 +265,10 @@ Enable debug logging:
 
 ```bash
 export CLAB_LOG_LEVEL=DEBUG
-./clab-tools.sh --verbose command
-```
+clab-tools --debug <command>
 
-./clab-tools.sh --debug --enable-remote remote test-connection
+# Example with remote debugging
+clab-tools --debug --enable-remote remote test-connection
 ```
 
 ## Contributing Guidelines
@@ -346,7 +347,11 @@ rm -f tests/test_*.db
 ```bash
 # Check installation
 which clab-tools
-cat ~/.local/bin/clab-tools
+ls -la /usr/local/bin/clab-tools
+
+# Ensure package is installed
+source .venv/bin/activate
+pip install -e .
 
 # Reinstall CLI
 ./install-cli.sh

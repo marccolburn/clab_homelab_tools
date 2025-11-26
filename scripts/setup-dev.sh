@@ -4,7 +4,7 @@ set -e
 echo "Setting up development environment for Containerlab Homelab Tools..."
 
 # Check if we're in the right directory
-if [ ! -f "main.py" ]; then
+if [ ! -f "pyproject.toml" ]; then
     echo "Error: Please run this script from the project root directory"
     exit 1
 fi

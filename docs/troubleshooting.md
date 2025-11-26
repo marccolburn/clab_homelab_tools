@@ -39,8 +39,9 @@ ls -la /usr/local/bin/clab-tools
 # Check Python installation
 python3 --version
 
-# Reinstall dependencies
-pip install -r requirements.txt
+# Reinstall package
+source .venv/bin/activate
+pip install -e .
 ```
 
 ### Python Module Errors
@@ -49,13 +50,11 @@ pip install -r requirements.txt
 
 **Solutions**:
 ```bash
-# Install in virtual environment
+# Install in virtual environment with editable mode
 python3 -m venv .venv
 source .venv/bin/activate
-pip install -r requirements.txt
-
-# Or install globally
-pip3 install -r requirements.txt
+pip install --upgrade pip
+pip install -e .
 ```
 
 ## Database Issues
@@ -344,31 +343,29 @@ echo $VIRTUAL_ENV
 # Reactivate virtual environment
 source .venv/bin/activate
 
-# Reinstall dependencies
-pip install -r requirements.txt
+# Reinstall package
+pip install -e .
 
 # If still failing, recreate environment
 deactivate
 rm -rf .venv
 python3 -m venv .venv
 source .venv/bin/activate
-pip install -r requirements.txt
+pip install --upgrade pip
+pip install -e .
 ```
 
 #### Permission Issues
 **Problem**: Permission denied errors
 ```bash
-$ python main.py bridge create
+$ clab-tools bridge create
 Permission denied: bridge creation requires root privileges
 ```
 
 **Solution**:
 ```bash
 # Use sudo for bridge operations
-sudo python main.py bridge create
-
-# Or run with virtual environment
-sudo .venv/bin/python main.py bridge create
+sudo clab-tools bridge create
 
 # Check installation location
 ls -la /usr/local/bin/clab-tools
@@ -380,20 +377,20 @@ readlink /usr/local/bin/clab-tools
 #### Configuration File Not Found
 **Problem**: Configuration file not loaded
 ```bash
-$ python main.py --config myconfig.yaml data show
+$ clab-tools --config myconfig.yaml data show
 ✗ Error: Configuration file not found: myconfig.yaml
 ```
 
 **Solution**:
 ```bash
 # Use absolute path
-python main.py --config /full/path/to/myconfig.yaml data show
+clab-tools --config /full/path/to/myconfig.yaml data show
 
 # Check current directory
 ls -la *.yaml
 
 # Use default configuration
-cp config.yaml myconfig.yaml
+cp config.local.example.yaml config.local.yaml
 ```
 
 #### Invalid Configuration
@@ -427,7 +424,7 @@ except Exception as e:
 **Problem**: Environment variables not recognized
 ```bash
 $ export CLAB_DATABASE_URL="sqlite:///test.db"
-$ python main.py data show
+$ clab-tools data show
 # Still using default database
 ```
 
@@ -436,15 +433,15 @@ $ python main.py data show
 # Check variable format
 env | grep CLAB_
 
+# Use config show to see where settings are coming from
+clab-tools config show
+
 # Ensure correct naming
 export CLAB_DATABASE_URL="sqlite:///test.db"  # Correct
 export CLAB_DB_URL="sqlite:///test.db"        # Incorrect
 
-# Test variable loading
-python -c "
-import os
-print('CLAB_DATABASE_URL:', os.getenv('CLAB_DATABASE_URL'))
-"
+# List all recognized CLAB environment variables
+clab-tools config env
 ```
 
 ### Database Issues
@@ -461,7 +458,7 @@ print('CLAB_DATABASE_URL:', os.getenv('CLAB_DATABASE_URL'))
 ls -la clab_topology.db
 
 # Try different database
-python main.py --db-url "sqlite:///temp.db" data show
+clab-tools --db-url "sqlite:///temp.db" data show
 
 # Check for lock files
 ls -la *.db-*
@@ -470,7 +467,7 @@ ls -la *.db-*
 rm -f clab_topology.db-wal clab_topology.db-shm
 
 # Test with in-memory database
-python main.py --db-url "sqlite:///:memory:" data show
+clab-tools --db-url "sqlite:///:memory:" data show
 ```
 
 #### Database Schema Issues
@@ -482,11 +479,11 @@ python main.py --db-url "sqlite:///:memory:" data show
 **Solution**:
 ```bash
 # Let the application create tables automatically
-python main.py data show
+clab-tools data show
 
 # Or manually recreate database
 rm -f clab_topology.db
-python main.py data show
+clab-tools data show
 
 # Check database schema
 sqlite3 clab_topology.db ".schema"
@@ -513,7 +510,7 @@ psql -h database-host -U username -d database
 export CLAB_DATABASE_URL="postgresql://user:pass@host:5432/dbname"
 
 # Enable connection debugging
-python main.py --debug --db-url "postgresql://user:pass@host/db" data show
+clab-tools --debug --db-url "postgresql://user:pass@host/db" data show
 ```
 
 ### CSV Import Issues
@@ -530,7 +527,7 @@ python main.py --debug --db-url "postgresql://user:pass@host/db" data show
 ls -la nodes.csv connections.csv
 
 # Use absolute paths
-python main.py data import -n /full/path/to/nodes.csv -c /full/path/to/connections.csv
+clab-tools data import -n /full/path/to/nodes.csv -c /full/path/to/connections.csv
 
 # Check current directory
 pwd
@@ -569,17 +566,10 @@ iconv -f UTF-8-BOM -t UTF-8 nodes.csv > nodes_clean.csv
 **Solution**:
 ```bash
 # Enable debug mode for detailed errors
-python main.py --debug data import -n nodes.csv -c connections.csv
+clab-tools --debug data import -n nodes.csv -c connections.csv
 
-# Validate CSV data manually
-python -c "
-import pandas as pd
-df = pd.read_csv('nodes.csv')
-print('Columns:', df.columns.tolist())
-print('Data types:', df.dtypes)
-print('Sample data:')
-print(df.head())
-"
+# Check CSV headers and sample data
+head -5 nodes.csv
 
 # Check for special characters
 grep -P '[^\x00-\x7F]' nodes.csv
@@ -595,20 +585,12 @@ grep -P '[^\x00-\x7F]' nodes.csv
 
 **Solution**:
 ```bash
-# Check template syntax
-python -c "
-from jinja2 import Template
-with open('topology_template.j2') as f:
-    template = Template(f.read())
-    print('Template syntax is valid')
-"
-
 # Use default template
 cp topology_template.j2 topology_template.j2.backup
 git checkout topology_template.j2
 
 # Debug template variables
-python main.py --debug topology generate -o test.yml
+clab-tools --debug topology generate -o test.yml
 ```
 
 #### YAML Validation Errors
@@ -620,15 +602,10 @@ python main.py --debug topology generate -o test.yml
 **Solution**:
 ```bash
 # Generate without validation
-python main.py topology generate -o test.yml
+clab-tools topology generate -o test.yml
 
 # Check YAML syntax
-python -c "
-import yaml
-with open('test.yml') as f:
-    data = yaml.safe_load(f)
-    print('YAML is valid')
-"
+python -c "import yaml; yaml.safe_load(open('test.yml')); print('YAML is valid')"
 
 # Use YAML linter
 yamllint test.yml
@@ -659,7 +636,7 @@ sudo ip link add test-br type bridge
 sudo ip link delete test-br
 
 # Use dry-run mode for debugging
-python main.py bridge create --dry-run
+clab-tools bridge create --dry-run
 ```
 
 #### Bridge Cleanup Issues
@@ -681,7 +658,7 @@ sudo ip link set br-name down
 sudo ip link delete br-name
 
 # Force cleanup
-python main.py cleanup-bridges --force
+sudo clab-tools bridge cleanup --force
 ```
 
 ### Logging Issues
@@ -718,14 +695,14 @@ mkdir -p logs
 **Solution**:
 ```bash
 # Check log format setting
-python main.py --log-format console data show
+clab-tools --log-format console data show
 
 # Verify configuration
 grep -A 5 "logging:" config.yaml
 
 # Test different formats
-python main.py --log-format json data show
-python main.py --log-format console data show
+clab-tools --log-format json data show
+clab-tools --log-format console data show
 ```
 
 ## Performance Issues
@@ -739,7 +716,7 @@ python main.py --log-format console data show
 **Solution**:
 ```bash
 # Enable debug mode to see progress
-python main.py --debug data import -n large_nodes.csv -c large_connections.csv
+clab-tools --debug data import -n large_nodes.csv -c large_connections.csv
 
 # Check file sizes
 wc -l *.csv
@@ -762,12 +739,8 @@ MemoryError: Unable to allocate array
 
 **Solution**:
 ```bash
-# Monitor memory usage
-python main.py --debug data import -n nodes.csv -c connections.csv &
-top -p $!
-
-# Use streaming processing for large files
-# (Feature available in code - check pandas chunksize)
+# Monitor system resources while importing
+clab-tools --debug data import -n nodes.csv -c connections.csv
 
 # Increase system memory or use smaller datasets
 # Split large CSV files into smaller chunks
@@ -802,10 +775,10 @@ export CLAB_DATABASE_URL="postgresql://user:pass@localhost/clab"
 ### Debug Mode Analysis
 ```bash
 # Enable comprehensive debugging
-python main.py --debug --log-level DEBUG --log-format json data import -n nodes.csv -c connections.csv
+clab-tools --debug --log-level DEBUG --log-format json data import -n nodes.csv -c connections.csv
 
 # Save debug output
-python main.py --debug data show 2>&1 | tee debug.log
+clab-tools --debug data show 2>&1 | tee debug.log
 
 # Analyze debug output
 grep "ERROR" debug.log
@@ -848,16 +821,16 @@ chmod +x debug_info.sh
 ### Log Analysis Tools
 ```bash
 # Analyze JSON logs
-python main.py --log-format json data show | jq '.'
+clab-tools --log-format json data show | jq '.'
 
 # Filter specific log levels
-python main.py --debug data show 2>&1 | grep "ERROR"
+clab-tools --debug data show 2>&1 | grep "ERROR"
 
 # Extract timing information
-python main.py --debug data show 2>&1 | grep "duration"
+clab-tools --debug data show 2>&1 | grep "duration"
 
 # Count log entries by level
-python main.py --debug data show 2>&1 | grep -o '"level":"[^"]*"' | sort | uniq -c
+clab-tools --debug data show 2>&1 | grep -o '"level":"[^"]*"' | sort | uniq -c
 ```
 
 ## Getting Help

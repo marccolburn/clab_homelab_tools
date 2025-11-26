@@ -413,13 +413,13 @@ clab-tools validates configuration on startup:
 
 ```bash
 # Validate current configuration
-./clab-tools.sh --help
+clab-tools --help
 
-# Show effective configuration (with overrides)
-./clab-tools.sh remote show-config
+# Show effective configuration with sources
+clab-tools config show
 
 # Test remote host connectivity
-./clab-tools.sh remote test-connection lab-server-1
+clab-tools remote test-connection
 ```
 
 ## Configuration Examples
@@ -549,8 +549,8 @@ bridges:
 ```
 
 ```bash
-# Merge with main config
-./clab-tools.sh config merge shared-bridges.yaml
+# Use shared config with your local overrides
+clab-tools --config shared-bridges.yaml lab current
 ```
 
 ## Troubleshooting
@@ -618,10 +618,10 @@ env | grep CLAB_ | cut -d= -f1 | xargs unset
 
 ```bash
 # Test SSH connectivity
-./clab-tools.sh remote test-connection hostname
+clab-tools remote test-connection
 
-# Check remote containerlab status
-./clab-tools.sh remote test-connection
+# Check remote configuration
+clab-tools config show --section remote
 ```
 
 For more configuration troubleshooting, see the [Troubleshooting Guide](troubleshooting.md).
