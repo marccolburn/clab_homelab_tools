@@ -15,7 +15,6 @@ while [ -L "$SCRIPT_PATH" ]; do
 done
 SCRIPT_DIR="$(cd "$(dirname "$SCRIPT_PATH")" && pwd)"
 PYTHON_CMD="$SCRIPT_DIR/.venv/bin/python"
-MAIN_SCRIPT="$SCRIPT_DIR/clab_tools/main.py"
 
 # Check if virtual environment exists
 if [ ! -f "$PYTHON_CMD" ]; then
@@ -26,17 +25,20 @@ if [ ! -f "$PYTHON_CMD" ]; then
     echo "Please run the following commands in $SCRIPT_DIR:"
     echo "  python3 -m venv .venv"
     echo "  source .venv/bin/activate"
-    echo "  pip install -r requirements.txt"
+    echo "  pip install -e ."
     exit 1
 fi
 
-# Check if main.py exists
-if [ ! -f "$MAIN_SCRIPT" ]; then
-    echo "Error: main.py not found at $MAIN_SCRIPT"
+# Check if package is installed
+if ! "$PYTHON_CMD" -c "import clab_tools" 2>/dev/null; then
+    echo "Error: clab_tools package not installed in virtual environment"
     echo "Resolved script directory: $SCRIPT_DIR"
-    echo "Please ensure the clab_homelab_tools project is properly installed."
+    echo ""
+    echo "Please run the following commands in $SCRIPT_DIR:"
+    echo "  source .venv/bin/activate"
+    echo "  pip install -e ."
     exit 1
 fi
 
-# Run the Python script with all passed arguments
-exec "$PYTHON_CMD" "$MAIN_SCRIPT" "$@"
+# Run as Python module (handles package imports correctly)
+exec "$PYTHON_CMD" -m clab_tools.cli "$@"

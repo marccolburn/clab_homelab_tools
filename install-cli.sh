@@ -26,7 +26,16 @@ if [ ! -f "$SCRIPT_DIR/.venv/bin/python" ]; then
     echo "Please run the following commands first:"
     echo "  python3 -m venv .venv"
     echo "  source .venv/bin/activate"
-    echo "  pip install -r requirements.txt"
+    echo "  pip install -e ."
+    exit 1
+fi
+
+# Check if package is installed in editable mode
+if ! "$SCRIPT_DIR/.venv/bin/python" -c "import clab_tools" 2>/dev/null; then
+    echo "Error: clab_tools package not installed."
+    echo "Please run the following commands first:"
+    echo "  source .venv/bin/activate"
+    echo "  pip install -e ."
     exit 1
 fi
 

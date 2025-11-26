@@ -8,6 +8,10 @@ A multi-lab CLI tool for managing containerlab network topologies with persisten
 # Setup
 git clone https://github.com/marccolburn/clab_homelab_tools.git
 cd clab_homelab_tools
+python3 -m venv .venv
+source .venv/bin/activate
+pip install --upgrade pip
+pip install -e .
 ./install-cli.sh
 
 # Bootstrap a complete lab (new!)
@@ -74,7 +78,11 @@ See the [Development Guide](docs/development.md) for setup instructions and cont
 
 ```bash
 # Quick start for contributors
-./scripts/setup-dev.sh
+python3 -m venv .venv
+source .venv/bin/activate
+pip install --upgrade pip
+pip install -e ".[dev]"
+pre-commit install
 git checkout -b feature/your-feature
 # Make changes, test, commit, push, create PR
 ```

@@ -16,6 +16,12 @@ Quick setup and first steps with clab-tools.
 git clone https://github.com/marccolburn/clab_homelab_tools.git
 cd clab_homelab_tools
 
+# Create virtual environment and install package
+python3 -m venv .venv
+source .venv/bin/activate
+pip install --upgrade pip
+pip install -e .
+
 # Install system-wide CLI
 ./install-cli.sh
 
@@ -23,10 +29,12 @@ cd clab_homelab_tools
 clab-tools --help
 ```
 
-The install script creates:
-- Python virtual environment in the project directory (`.venv/`)
-- CLI symlink at `/usr/local/bin/clab-tools` pointing to the project
-- Database file in the installation directory (`clab_topology.db`)
+The install script:
+- Verifies the virtual environment exists and package is installed
+- Creates a CLI symlink at `/usr/local/bin/clab-tools` pointing to the project
+- Allows running `clab-tools` from anywhere on the system
+
+**Note**: The package must be installed in editable mode (`pip install -e .`) before running `install-cli.sh`. This ensures Python can properly resolve all package imports.
 
 ### Essential Configuration (Important!)
 
