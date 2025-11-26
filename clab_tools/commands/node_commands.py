@@ -476,6 +476,7 @@ def config_command(
             results = config_manager.load_config_from_device(
                 nodes=target_nodes,
                 device_file_path=device_file,
+                format=config_format,
                 method=load_method,
                 dry_run=dry_run,
                 commit_comment=comment,

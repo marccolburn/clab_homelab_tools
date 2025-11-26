@@ -93,6 +93,7 @@ class ConfigManager:
         self,
         nodes: List[Node],
         device_file_path: str,
+        format: ConfigFormat = ConfigFormat.TEXT,
         method: ConfigLoadMethod = ConfigLoadMethod.MERGE,
         dry_run: bool = False,
         commit_comment: Optional[str] = None,
@@ -104,6 +105,7 @@ class ConfigManager:
         Args:
             nodes: List of nodes
             device_file_path: Path on device
+            format: Configuration format (text, set, xml, json)
             method: Load method
             dry_run: Validate only
             commit_comment: Commit comment
@@ -115,11 +117,11 @@ class ConfigManager:
         """
         if parallel and len(nodes) > 1:
             return self._load_device_parallel(
-                nodes, device_file_path, method, dry_run, commit_comment, max_workers
+                nodes, device_file_path, format, method, dry_run, commit_comment, max_workers
             )
         else:
             return self._load_device_sequential(
-                nodes, device_file_path, method, dry_run, commit_comment
+                nodes, device_file_path, format, method, dry_run, commit_comment
             )
 
     def _load_parallel(
@@ -246,6 +248,7 @@ class ConfigManager:
         self,
         nodes: List[Node],
         device_file_path: str,
+        format: ConfigFormat,
         method: ConfigLoadMethod,
         dry_run: bool,
         commit_comment: Optional[str],
@@ -256,6 +259,7 @@ class ConfigManager:
         Args:
             nodes: List of nodes
             device_file_path: Device file path
+            format: Configuration format
             method: Load method
             dry_run: Validate only
             commit_comment: Commit comment
@@ -284,6 +288,7 @@ class ConfigManager:
                         self._load_device_on_node,
                         node,
                         device_file_path,
+                        format,
                         method,
                         dry_run,
                         commit_comment,
@@ -314,6 +319,7 @@ class ConfigManager:
         self,
         nodes: List[Node],
         device_file_path: str,
+        format: ConfigFormat,
         method: ConfigLoadMethod,
         dry_run: bool,
         commit_comment: Optional[str],
@@ -323,6 +329,7 @@ class ConfigManager:
         Args:
             nodes: List of nodes
             device_file_path: Device file path
+            format: Configuration format
             method: Load method
             dry_run: Validate only
             commit_comment: Commit comment
@@ -341,7 +348,7 @@ class ConfigManager:
 
             try:
                 result = self._load_device_on_node(
-                    node, device_file_path, method, dry_run, commit_comment
+                    node, device_file_path, format, method, dry_run, commit_comment
                 )
                 results.append(result)
             except Exception as e:
@@ -445,6 +452,7 @@ class ConfigManager:
         self,
         node: Node,
         device_file_path: str,
+        format: ConfigFormat,
         method: ConfigLoadMethod,
         dry_run: bool,
         commit_comment: Optional[str],
@@ -454,6 +462,7 @@ class ConfigManager:
         Args:
             node: Node to configure
             device_file_path: Device file path
+            format: Configuration format
             method: Load method
             dry_run: Validate only
             commit_comment: Commit comment
@@ -499,7 +508,7 @@ class ConfigManager:
                     # For device files, we can't validate without loading
                     # So we load but don't commit
                     result = driver.load_config_from_file(
-                        device_file_path, method, None
+                        device_file_path, format, method, None
                     )
                     if result.success:
                         # Rollback the changes
@@ -513,7 +522,7 @@ class ConfigManager:
                     return result
                 else:
                     return driver.load_config_from_file(
-                        device_file_path, method, commit_comment
+                        device_file_path, format, method, commit_comment
                     )
         except Exception as e:
             return ConfigResult(

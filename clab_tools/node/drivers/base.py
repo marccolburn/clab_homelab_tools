@@ -151,6 +151,7 @@ class BaseNodeDriver(ABC):
     def load_config_from_file(
         self,
         device_file_path: str,
+        format: ConfigFormat = ConfigFormat.TEXT,
         method: ConfigLoadMethod = ConfigLoadMethod.MERGE,
         commit_comment: Optional[str] = None,
     ) -> ConfigResult:
@@ -158,6 +159,7 @@ class BaseNodeDriver(ABC):
 
         Args:
             device_file_path: Path to config file on device
+            format: Configuration format (text, set, xml, json)
             method: Load method (merge, override, replace)
             commit_comment: Optional commit comment
 
