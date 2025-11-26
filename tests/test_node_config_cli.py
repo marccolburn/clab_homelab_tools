@@ -12,7 +12,7 @@ from clab_tools.node.drivers.juniper import JuniperPyEZDriver
 @pytest.fixture
 def runner():
     """Create a CLI runner."""
-    return CliRunner(mix_stderr=False)
+    return CliRunner()
 
 
 def test_node_config_command_help(runner):
