@@ -568,9 +568,10 @@ class JuniperPyEZDriver(BaseNodeDriver):
         # We remove everything from ' ## ' to end of line (including the leading space)
         cleaned_lines = []
         for line in output.splitlines():
-            # Remove inline comments like '; ## SECRET-DATA'
+            # Remove inline comments like '; ## SECRET-DATA' including the semicolon
             # The pattern matches: semicolon, optional whitespace, ##, anything to end
-            cleaned_line = re.sub(r";\s*##.*$", ";", line)
+            # In set-format configs, the semicolon is only present for annotation comments
+            cleaned_line = re.sub(r";\s*##.*$", "", line)
             # Also handle cases where ## appears without semicolon (less common)
             cleaned_line = re.sub(r"\s+##.*$", "", cleaned_line)
             cleaned_lines.append(cleaned_line)
