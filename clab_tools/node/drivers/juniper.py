@@ -3,6 +3,7 @@
 import io
 import logging
 import os
+import re
 import time
 import warnings
 from contextlib import redirect_stderr
@@ -325,23 +326,23 @@ class JuniperPyEZDriver(BaseNodeDriver):
             raise ConnectionError("Not connected to device")
 
         try:
+            # Read file content from device and clean it
+            # This handles files with ## SECRET-DATA comments that cause syntax errors
+            config_content = self._read_and_clean_device_file(device_file_path)
+
             # Lock configuration
             self.config.lock()
 
             # Map format to PyEZ format string
             pyez_format = self._map_config_format(format)
 
-            # Load from device file using url= parameter with explicit format
-            # PyEZ's path= parameter expects a local file, but url= can reference
-            # files on the device using the format: /path/to/file (without file:// prefix)
-            # PyEZ will interpret paths starting with / as device-local files
-            # We must specify format= to override PyEZ's extension-based detection
+            # Load the cleaned configuration content
             if method == ConfigLoadMethod.MERGE:
-                self.config.load(url=device_file_path, format=pyez_format, merge=True)
+                self.config.load(config_content, format=pyez_format, merge=True)
             elif method == ConfigLoadMethod.OVERRIDE:
-                self.config.load(url=device_file_path, format=pyez_format, overwrite=True)
+                self.config.load(config_content, format=pyez_format, overwrite=True)
             elif method == ConfigLoadMethod.REPLACE:
-                self.config.load(url=device_file_path, format=pyez_format, replace=True)
+                self.config.load(config_content, format=pyez_format, replace=True)
 
             # Get diff
             diff = self.config.diff()
@@ -539,6 +540,42 @@ class JuniperPyEZDriver(BaseNodeDriver):
             ConfigFormat.JSON: "json",
         }
         return mapping.get(format, "text")
+
+    def _read_and_clean_device_file(self, device_file_path: str) -> str:
+        """Read a file from the device and clean it for loading.
+
+        Removes Junos annotation comments like '## SECRET-DATA' that cause
+        syntax errors when loading set-format configurations.
+
+        Args:
+            device_file_path: Path to file on the device
+
+        Returns:
+            Cleaned configuration content
+
+        Raises:
+            Exception: If file cannot be read from device
+        """
+        # Read file content from device using CLI
+        # Using 'file show' command to read the file
+        output = self.device.cli(f"file show {device_file_path}", warning=False)
+
+        # Clean the content by removing Junos annotation comments
+        # These patterns appear in set-format configs exported from Junos:
+        # - ## SECRET-DATA
+        # - ## Last changed: ...
+        # - ## (other annotations)
+        # We remove everything from ' ## ' to end of line (including the leading space)
+        cleaned_lines = []
+        for line in output.splitlines():
+            # Remove inline comments like '; ## SECRET-DATA'
+            # The pattern matches: semicolon, optional whitespace, ##, anything to end
+            cleaned_line = re.sub(r";\s*##.*$", ";", line)
+            # Also handle cases where ## appears without semicolon (less common)
+            cleaned_line = re.sub(r"\s+##.*$", "", cleaned_line)
+            cleaned_lines.append(cleaned_line)
+
+        return "\n".join(cleaned_lines)
 
     def _execute_rpc_command(self, command: str) -> str:
         """Execute RPC command.
