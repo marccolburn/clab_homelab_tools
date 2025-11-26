@@ -182,6 +182,7 @@ class TestConfigManager:
 
         mock_driver.load_config_from_file.assert_called_once_with(
             "/tmp/device.conf",
+            ConfigFormat.TEXT,
             ConfigLoadMethod.OVERRIDE,
             "Device config",
         )

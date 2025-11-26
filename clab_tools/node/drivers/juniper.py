@@ -306,6 +306,7 @@ class JuniperPyEZDriver(BaseNodeDriver):
     def load_config_from_file(
         self,
         device_file_path: str,
+        format: ConfigFormat = ConfigFormat.TEXT,
         method: ConfigLoadMethod = ConfigLoadMethod.MERGE,
         commit_comment: Optional[str] = None,
     ) -> ConfigResult:
@@ -313,6 +314,7 @@ class JuniperPyEZDriver(BaseNodeDriver):
 
         Args:
             device_file_path: Path on device (file on the remote Junos device)
+            format: Configuration format (text, set, xml, json)
             method: Load method
             commit_comment: Commit comment
 
@@ -326,16 +328,20 @@ class JuniperPyEZDriver(BaseNodeDriver):
             # Lock configuration
             self.config.lock()
 
-            # Load from device file using url= parameter
+            # Map format to PyEZ format string
+            pyez_format = self._map_config_format(format)
+
+            # Load from device file using url= parameter with explicit format
             # PyEZ's path= parameter expects a local file, but url= can reference
             # files on the device using the format: /path/to/file (without file:// prefix)
             # PyEZ will interpret paths starting with / as device-local files
+            # We must specify format= to override PyEZ's extension-based detection
             if method == ConfigLoadMethod.MERGE:
-                self.config.load(url=device_file_path, merge=True)
+                self.config.load(url=device_file_path, format=pyez_format, merge=True)
             elif method == ConfigLoadMethod.OVERRIDE:
-                self.config.load(url=device_file_path, overwrite=True)
+                self.config.load(url=device_file_path, format=pyez_format, overwrite=True)
             elif method == ConfigLoadMethod.REPLACE:
-                self.config.load(url=device_file_path, replace=True)
+                self.config.load(url=device_file_path, format=pyez_format, replace=True)
 
             # Get diff
             diff = self.config.diff()
