@@ -347,6 +347,11 @@ def exec_command(
     help="Output format for results",
 )
 @click.option("--show-diff/--no-diff", default=True, help="Show configuration diff")
+@click.option(
+    "--show-cleaned",
+    is_flag=True,
+    help="Show cleaned config content (for device files) and exit without loading",
+)
 @click.pass_context
 @with_lab_context
 def config_command(
@@ -365,6 +370,7 @@ def config_command(
     max_workers,
     output_format,
     show_diff,
+    show_cleaned,
 ):
     """
     Load configurations to containerlab nodes.
@@ -458,6 +464,50 @@ def config_command(
     # Convert format and method strings to enums
     config_format = ConfigFormat(format)
     load_method = ConfigLoadMethod(method)
+
+    # Handle --show-cleaned option for device files
+    if show_cleaned:
+        if not device_file:
+            handle_error("--show-cleaned only works with --device-file (-d)")
+            return
+
+        # Connect to first target node and show cleaned content
+        from clab_tools.config.settings import get_settings
+        from clab_tools.node.drivers.base import ConnectionParams
+        from clab_tools.node.drivers.registry import DriverRegistry
+
+        settings = get_settings()
+        target_node = target_nodes[0]
+
+        username = (
+            getattr(target_node, "username", None)
+            or settings.node.default_username
+            or "admin"
+        )
+        password = (
+            getattr(target_node, "password", None) or settings.node.default_password
+        )
+
+        conn_params = ConnectionParams(
+            host=target_node.mgmt_ip,
+            username=username,
+            password=password,
+            port=getattr(target_node, "ssh_port", None) or settings.node.ssh_port or 22,
+            timeout=settings.node.connection_timeout or 30,
+            vendor=getattr(target_node, "vendor", None),
+            device_type=target_node.kind,
+        )
+
+        try:
+            driver = DriverRegistry.create_driver(conn_params)
+            with driver:
+                cleaned_content = driver._read_and_clean_device_file(device_file)
+                click.echo(f"=== Cleaned config from {device_file} on {target_node.name} ===\n")
+                click.echo(cleaned_content)
+                click.echo(f"\n=== End of cleaned config ===")
+        except Exception as e:
+            handle_error(f"Failed to read and clean config: {e}")
+        return
 
     try:
         # Load configurations
