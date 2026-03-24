@@ -4,6 +4,9 @@ mgmt:
   network: {{ mgmt_network }}
   ipv4-subnet: {{ mgmt_subnet }}
 topology:
+  defaults:
+    env:
+      CLAB_MGMT_PASSTHROUGH: "true"
   kinds:
 {%- for kind in unique_kinds %}
     {{ kind }}:
