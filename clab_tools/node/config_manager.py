@@ -117,7 +117,13 @@ class ConfigManager:
         """
         if parallel and len(nodes) > 1:
             return self._load_device_parallel(
-                nodes, device_file_path, format, method, dry_run, commit_comment, max_workers
+                nodes,
+                device_file_path,
+                format,
+                method,
+                dry_run,
+                commit_comment,
+                max_workers,
             )
         else:
             return self._load_device_sequential(

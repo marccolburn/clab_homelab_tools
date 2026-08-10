@@ -502,9 +502,11 @@ def config_command(
             driver = DriverRegistry.create_driver(conn_params)
             with driver:
                 cleaned_content = driver._read_and_clean_device_file(device_file)
-                click.echo(f"=== Cleaned config from {device_file} on {target_node.name} ===\n")
+                click.echo(
+                    f"=== Cleaned config from {device_file} on {target_node.name} ===\n"
+                )
                 click.echo(cleaned_content)
-                click.echo(f"\n=== End of cleaned config ===")
+                click.echo("\n=== End of cleaned config ===")
         except Exception as e:
             handle_error(f"Failed to read and clean config: {e}")
         return
