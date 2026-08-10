@@ -570,7 +570,8 @@ class JuniperPyEZDriver(BaseNodeDriver):
         for line in output.splitlines():
             # Remove inline comments like '; ## SECRET-DATA' including the semicolon
             # The pattern matches: semicolon, optional whitespace, ##, anything to end
-            # In set-format configs, the semicolon is only present for annotation comments
+            # In set-format configs, the semicolon only appears on annotation
+            # comments
             cleaned_line = re.sub(r";\s*##.*$", "", line)
             # Also handle cases where ## appears without semicolon (less common)
             cleaned_line = re.sub(r"\s+##.*$", "", cleaned_line)

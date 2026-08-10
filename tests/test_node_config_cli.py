@@ -49,10 +49,11 @@ class TestJuniperCleanDeviceFile:
         mock_device = Mock()
 
         # Sample config with SECRET-DATA comments
-        raw_config = '''set system login user lab authentication encrypted-password "$1$abc"; ## SECRET-DATA
+        raw_config = """\
+set system login user lab authentication encrypted-password "$1$abc"; ## SECRET-DATA
 set system login user admin authentication encrypted-password "$5$def"; ## SECRET-DATA
 set system host-name router1
-set interfaces ge-0/0/0 unit 0 family inet address 10.0.0.1/24'''
+set interfaces ge-0/0/0 unit 0 family inet address 10.0.0.1/24"""
 
         mock_device.cli.return_value = raw_config
 
@@ -79,15 +80,17 @@ set interfaces ge-0/0/0 unit 0 family inet address 10.0.0.1/24'''
         assert 'encrypted-password "$5$def"' in cleaned
         # Verify non-commented lines are unchanged
         assert "set system host-name router1" in cleaned
-        assert "set interfaces ge-0/0/0 unit 0 family inet address 10.0.0.1/24" in cleaned
+        assert (
+            "set interfaces ge-0/0/0 unit 0 family inet address 10.0.0.1/24" in cleaned
+        )
 
     def test_clean_last_changed_comments(self):
         """Test that ## Last changed comments are stripped."""
         mock_device = Mock()
 
-        raw_config = '''## Last changed: 2024-01-15 10:30:00 UTC
+        raw_config = """## Last changed: 2024-01-15 10:30:00 UTC
 set system host-name router1
-set system services ssh'''
+set system services ssh"""
 
         mock_device.cli.return_value = raw_config
 
@@ -114,10 +117,10 @@ set system services ssh'''
         """Test that normal config without comments is preserved."""
         mock_device = Mock()
 
-        raw_config = '''set system host-name router1
+        raw_config = """set system host-name router1
 set system services ssh
 set interfaces ge-0/0/0 description "WAN interface"
-set routing-options static route 0.0.0.0/0 next-hop 10.0.0.1'''
+set routing-options static route 0.0.0.0/0 next-hop 10.0.0.1"""
 
         mock_device.cli.return_value = raw_config
 
