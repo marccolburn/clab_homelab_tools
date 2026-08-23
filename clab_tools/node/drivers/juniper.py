@@ -103,6 +103,11 @@ class JuniperPyEZDriver(BaseNodeDriver):
             # Create and open device connection
             self.device = Device(**device_params)
             self.device.open()
+            # PyEZ's RPC timeout is a PROPERTY, not a constructor argument:
+            # the `timeout` above only bounds the SSH open. Without this a
+            # full-config commit on a slow box (a vSRX takes minutes) dies
+            # with RpcTimeoutError(timeout: 30) while the router commits on.
+            self.device.timeout = self.connection_params.timeout or 30
 
             # Bind config utility
             self.config = Config(self.device)
