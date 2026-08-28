@@ -115,6 +115,11 @@ class BridgeManager:
                 - stp: Enable spanning tree protocol (default: False)
                 - interfaces: List of interfaces to add to bridge
                 - vid_range: VLAN ID range to add (default: "1-4094")
+                - multicast_snooping: Leave IGMP/MLD snooping on (default: False).
+                  A lab bridge has no querier, so with snooping on the kernel
+                  stops delivering IPv6 multicast such as OSPFv3's ff02::5 once
+                  its learned membership ages out (~260 s): adjacencies come up,
+                  then die. IPv4 and IS-IS are unaffected, which hides it.
 
         Returns:
             Tuple of (success: bool, message: str)
@@ -127,6 +132,7 @@ class BridgeManager:
         stp = options.get("stp", False)
         interfaces = options.get("interfaces", [])
         vid_range = options.get("vid_range", "1-4094")
+        multicast_snooping = options.get("multicast_snooping", False)
 
         commands = []
 
@@ -173,6 +179,10 @@ class BridgeManager:
                 )
             )
 
+        # Multicast snooping off: see the docstring
+        if not multicast_snooping:
+            commands.append(self._build_command(self._snooping_off_cmd(bridge_name)))
+
         # Add interfaces if specified
         for interface in interfaces:
             commands.append(
@@ -212,6 +222,8 @@ class BridgeManager:
                 features.append(f"VLAN filtering ({vid_range})")
             if not stp:
                 features.append("STP disabled")
+            if not multicast_snooping:
+                features.append("multicast snooping off")
             if interfaces:
                 features.append(f"{len(interfaces)} interfaces")
 
@@ -395,6 +407,24 @@ class BridgeManager:
                             interface = interface.split("@")[0]
                         ports.append(interface)
 
+            # The bridge itself: multicast snooping off (see create_bridge).
+            # This runs on every bridge, including one containerlab or a
+            # human created with the kernel default (snooping on), and is
+            # idempotent -- so a lab that boots fine and loses OSPFv3 five
+            # minutes later is fixed here even when we did not create it.
+            snoop_cmd = self._build_command(self._snooping_off_cmd(bridge_name))
+            if dry_run:
+                click.echo(
+                    f"Would disable multicast snooping on {bridge_name} "
+                    f"on {location}"
+                )
+                click.echo(f"    Command: {' '.join(snoop_cmd)}")
+            else:
+                self._execute_command(
+                    snoop_cmd, capture_output=True, text=True, check=True
+                )
+                click.echo(f"✓ Multicast snooping off on {bridge_name}")
+
             if not ports:
                 return True, f"No ports found on bridge {bridge_name}"
 
@@ -444,6 +474,21 @@ class BridgeManager:
                 )
         except Exception as e:
             return False, f"Failed to configure bridge VLANs: {e}"
+
+    @staticmethod
+    def _snooping_off_cmd(bridge_name):
+        """`ip link set <bridge> type bridge mcast_snooping 0` -- the one
+        knob; an MLD querier would also work but needs a source address."""
+        return [
+            "ip",
+            "link",
+            "set",
+            bridge_name,
+            "type",
+            "bridge",
+            "mcast_snooping",
+            "0",
+        ]
 
     def _build_command(self, base_command):
         """

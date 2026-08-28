@@ -386,11 +386,21 @@ Shows required bridges from topology and their current status.
 
 #### `bridge configure`
 
-Configure VLAN forwarding on bridge interfaces.
+Configure VLAN forwarding on bridge interfaces, and turn multicast snooping
+off on the bridge itself.
 
 ```bash
 sudo clab-tools bridge configure [OPTIONS]
 ```
+
+Run it after `topology start`: containerlab attaches the veths with the
+kernel defaults, so every port starts as `1 PVID untagged` (tagged frames
+dropped) and the bridge snoops IGMP/MLD with no querier present. The second
+one is the subtle failure: IPv6 multicast such as OSPFv3's `ff02::5` is
+delivered for about 260 s (the bridge's membership interval) and then
+silently dropped, so OSPFv3 adjacencies across the bridge form and die five
+minutes later while IPv4 and IS-IS keep working. `bridge create` sets the
+same knob; `bridge configure` re-applies it on any bridge, whoever made it.
 
 **Options:**
 - `--bridge TEXT` - Target specific bridge (default: all bridges)

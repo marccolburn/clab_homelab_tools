@@ -304,3 +304,79 @@ class TestBridgeManager:
 
             assert success is True
             assert "already exist" in message
+
+
+class TestMulticastSnooping:
+    """A lab bridge must not snoop: no querier, so IPv6 multicast (OSPFv3
+    hellos) stops after the membership interval."""
+
+    @pytest.fixture
+    def bridge_manager(self):
+        return BridgeManager(Mock())
+
+    SNOOP_OFF = [
+        "sudo",
+        "ip",
+        "link",
+        "set",
+        "br-test",
+        "type",
+        "bridge",
+        "mcast_snooping",
+        "0",
+    ]
+
+    @patch("clab_tools.bridges.manager.subprocess.run")
+    def test_create_bridge_turns_snooping_off(self, mock_subprocess, bridge_manager):
+        with patch.object(bridge_manager, "check_bridge_exists", return_value=False):
+            mock_subprocess.return_value.returncode = 0
+            success, message = bridge_manager.create_bridge("br-test")
+        assert success is True
+        assert "multicast snooping off" in message
+        cmds = [c.args[0] for c in mock_subprocess.call_args_list]
+        assert self.SNOOP_OFF in cmds
+
+    @patch("clab_tools.bridges.manager.subprocess.run")
+    def test_create_bridge_can_keep_snooping(self, mock_subprocess, bridge_manager):
+        with patch.object(bridge_manager, "check_bridge_exists", return_value=False):
+            mock_subprocess.return_value.returncode = 0
+            bridge_manager.create_bridge("br-test", multicast_snooping=True)
+        cmds = [c.args[0] for c in mock_subprocess.call_args_list]
+        assert self.SNOOP_OFF not in cmds
+
+    @patch("clab_tools.bridges.manager.subprocess.run")
+    def test_configure_vlans_turns_snooping_off_first(
+        self, mock_subprocess, bridge_manager
+    ):
+        """Through `bridge configure`, the step a deployer runs after
+        topology start on a bridge containerlab already populated."""
+        mock_subprocess.return_value.returncode = 0
+        mock_subprocess.return_value.stdout = (
+            "2: eth401@if3: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 9500 "
+            "master br-test state forwarding priority 32 cost 2\n"
+        )
+        with patch.object(bridge_manager, "check_bridge_exists", return_value=True):
+            success, message = bridge_manager.configure_bridge_vlans("br-test")
+        assert success is True, message
+        cmds = [c.args[0] for c in mock_subprocess.call_args_list]
+        assert cmds[1] == self.SNOOP_OFF  # right after the port listing
+        assert [
+            "sudo",
+            "bridge",
+            "vlan",
+            "add",
+            "vid",
+            "1-4094",
+            "dev",
+            "eth401",
+        ] in cmds
+
+    @patch("clab_tools.bridges.manager.subprocess.run")
+    def test_configure_vlans_dry_run_only_prints(self, mock_subprocess, bridge_manager):
+        mock_subprocess.return_value.returncode = 0
+        mock_subprocess.return_value.stdout = ""
+        with patch.object(bridge_manager, "check_bridge_exists", return_value=True):
+            success, _ = bridge_manager.configure_bridge_vlans("br-test", dry_run=True)
+        assert success is True
+        cmds = [c.args[0] for c in mock_subprocess.call_args_list]
+        assert self.SNOOP_OFF not in cmds

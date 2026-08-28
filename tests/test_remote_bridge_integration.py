@@ -418,9 +418,10 @@ class TestBridgeManagerSudoCommands:
             "ip link set test-bridge up",
             "ip link set test-bridge type bridge stp_state 0",
             "bridge vlan add vid 1-4094 dev test-bridge self",
+            "ip link set test-bridge type bridge mcast_snooping 0",
         ]
 
-        assert remote_manager.execute_command.call_count == 4
+        assert remote_manager.execute_command.call_count == 5
         for i, expected_cmd in enumerate(expected_calls):
             actual_call = remote_manager.execute_command.call_args_list[i]
             assert actual_call[0][0] == expected_cmd
