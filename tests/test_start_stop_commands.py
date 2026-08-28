@@ -119,6 +119,42 @@ def test_start_remote_execution(mock_run, mock_get_remote, topology_file, tmp_pa
 
 @patch("clab_tools.commands.topology_commands.get_remote_host_manager")
 @patch("subprocess.run")
+def test_start_remote_reconfigure_and_sudo(
+    mock_run, mock_get_remote, topology_file, monkeypatch
+):
+    """Redeploying a RUNNING lab needs `--reconfigure` (plain deploy fails
+    with "interface ... already exists"), and the remote manager only
+    supplies the sudo password to a command that starts with `sudo`."""
+    monkeypatch.setenv("CLAB_REMOTE_USE_SUDO", "true")
+    mock_remote_manager = MagicMock()
+    mock_remote_manager.__enter__.return_value = mock_remote_manager
+    mock_remote_manager.__exit__.return_value = None
+    mock_remote_manager.execute_command.return_value = (0, "Lab deployed", "")
+    mock_get_remote.return_value = mock_remote_manager
+
+    runner = CliRunner()
+    result = runner.invoke(
+        cli, ["topology", "start", topology_file, "--remote", "--reconfigure"]
+    )
+    assert result.exit_code == 0, result.output
+    cmd = mock_remote_manager.execute_command.call_args[0][0]
+    assert cmd.startswith("sudo clab deploy -t "), cmd
+    assert cmd.endswith(" --reconfigure"), cmd
+
+
+@patch("subprocess.run")
+def test_start_local_reconfigure(mock_run, topology_file):
+    mock_run.return_value.returncode = 0
+    mock_run.return_value.stdout = ""
+    mock_run.return_value.stderr = ""
+    runner = CliRunner()
+    result = runner.invoke(cli, ["topology", "start", topology_file, "--reconfigure"])
+    assert result.exit_code == 0
+    assert mock_run.call_args[0][0][-1] == "--reconfigure"
+
+
+@patch("clab_tools.commands.topology_commands.get_remote_host_manager")
+@patch("subprocess.run")
 def test_stop_remote_execution(mock_run, mock_get_remote, topology_file):
     """Test stop command with --remote flag."""
     # Mock remote manager

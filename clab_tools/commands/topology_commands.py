@@ -186,15 +186,24 @@ def generate_topology(
 )
 @click.option("--remote", is_flag=True, help="Force remote execution")
 @click.option("--local", is_flag=True, help="Force local execution")
+@click.option(
+    "--reconfigure",
+    is_flag=True,
+    help="Redeploy over a running lab (clab deploy --reconfigure)",
+)
 @click.pass_context
 @with_lab_context
-def start(ctx, topology_file, path, remote, local):
+def start(ctx, topology_file, path, remote, local, reconfigure):
     """
     Start a containerlab topology.
 
     By default, runs locally. Use --remote to force remote execution.
     If remote host is configured, uses remote.topology_remote_dir unless
     --path is specified.
+
+    A lab that is already running makes plain `clab deploy` fail with
+    "interface ... is defined via topology but already exists"; pass
+    --reconfigure to destroy and redeploy it in one step.
     """
     settings = get_settings()
     quiet = ctx.obj.get("quiet", False)
@@ -235,7 +244,13 @@ def start(ctx, topology_file, path, remote, local):
         # Execute remote start
         try:
             with remote_manager:
-                command = f"clab deploy -t {topology_path}"
+                # sudo per remote host settings, like the bridge manager:
+                # containerlab needs root to create veths/bridges, and the
+                # remote manager only feeds the sudo password to a command
+                # that starts with "sudo"
+                prefix = "sudo " if settings.remote.use_sudo else ""
+                flags = " --reconfigure" if reconfigure else ""
+                command = f"{prefix}clab deploy -t {topology_path}{flags}"
                 if not quiet:
                     click.echo(f"Starting topology remotely: {topology_path}")
 
@@ -267,8 +282,11 @@ def start(ctx, topology_file, path, remote, local):
         try:
             import subprocess
 
+            argv = ["clab", "deploy", "-t", topology_path]
+            if reconfigure:
+                argv.append("--reconfigure")
             result = subprocess.run(
-                ["clab", "deploy", "-t", topology_path],
+                argv,
                 capture_output=True,
                 text=True,
                 check=False,
