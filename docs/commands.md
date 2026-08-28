@@ -244,9 +244,11 @@ clab-tools topology start topology.yml [OPTIONS]
 - `-p, --path TEXT` - Custom path for topology file (overrides remote dir)
 - `--remote` - Force remote execution
 - `--local` - Force local execution (when remote is configured)
+- `--reconfigure` - Redeploy over a running lab (`clab deploy --reconfigure`). Without it a running lab fails with `interface ... is defined via topology but already exists`
 
 **Behavior:**
 - Default: Runs locally
+- Remote execution prefixes `sudo` when `remote.use_sudo` is set (the sudo password is only supplied to commands that start with `sudo`)
 - If remote host is configured, uses `remote.topology_remote_dir` unless `--path` is specified
 - Use `--remote` to force remote execution
 - Use `--local` to force local execution when remote is configured
@@ -258,6 +260,9 @@ clab-tools topology start lab.yml
 
 # Start topology on remote host
 clab-tools topology start lab.yml --remote
+
+# Redeploy a lab that is already running
+clab-tools topology start lab.yml --remote --reconfigure
 
 # Start topology with custom path
 clab-tools topology start lab.yml --path /custom/path/lab.yml
