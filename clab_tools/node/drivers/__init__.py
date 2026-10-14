@@ -16,6 +16,11 @@ try:
 except ImportError:
     # PyEZ not installed, skip registration
     pass
+try:
+    from clab_tools.node.drivers.cisco_nxos import CiscoNxosDriver  # noqa: F401
+except ImportError:
+    # paramiko not installed, skip registration
+    pass
 
 __all__ = [
     "BaseNodeDriver",

@@ -2,7 +2,22 @@
 
 This document provides a comprehensive guide to the clab-tools codebase for AI assistants working on this project.
 
-## CURRENT STATUS (v1.1.3 - Released 2025-07-01)
+## CURRENT STATUS (v1.1.5 - 2026-09-09)
+
+### ✅ v1.1.5 — Cisco NX-OS driver
+
+- `clab_tools/node/drivers/cisco_nxos.py`: `CiscoNxosDriver` over a paramiko
+  ssh shell, registered for kinds `cisco_n9kv` / `vr-n9kv` / `cisco_nxos` and
+  vendor `cisco`, so `node exec` and `node config` work on an N9Kv the way
+  they do on vJunos. NX-OS has no candidate configuration: `load_config`
+  MERGES only (`configure terminal` + lines + `end`, then `copy running-config
+  startup-config`); `override`/`replace` are refused with a clear message; any
+  `%`-prefixed response names the rejected line and the load is reported
+  failed (nothing is saved). `load_config_from_file` is `copy bootflash:… 
+  running-config`. Tests: `tests/test_node_drivers_cisco_nxos.py` over a
+  scripted fake shell. The 1.1.4 bridge multicast-snooping change is included.
+
+## (was) CURRENT STATUS (v1.1.3 - Released 2025-07-01)
 
 ### ✅ LATEST FIXES (v1.1.3 - Critical Security & Environment Variable Fixes):
 
